@@ -9,13 +9,17 @@
  - flag{2} - control{2} - Sender{1} - Receiver{1} - _bit0{2} - choose{4} - crc(x^2+1){2}  - flag{2}
  - flag{2} - control{2} - Sender{1} - Receiver{1} - all_bit0{6} - crc(x^2+1){2}  - flag{2}
 4. **other:**<br />
-- flag{3}  -> 101 <br />
+- flag{2}  -> 11 <br />
 - control{2} -><br />
  -  00 -> DataFrame<br />
  -  01 -> ACK<br />
  -  10 -> initial - choose<br />
- - 11 -> initial - all<br />
+ -  11 -> initial - all<br />
 - ACKNumber{1} -> 0 or 1 (stop and wait)<br />
+- angle{2}-><br />
+-  00 -> 0 degree<br />
+-  01 -> +45 degree<br />
+-  10 -> -45 degree<br />
 ## 4-FSK Encoding Rule
 - 00 -> 3 cycles/baud
 - 01 -> 5 cycles/baud
