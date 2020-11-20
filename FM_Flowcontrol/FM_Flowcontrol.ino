@@ -1,7 +1,7 @@
 
 #define sender 1  //config A or B
 #define receiver 0 //config A or B 
-String enFrame_data(int data,int angle){
+String enFrame_data(int data,int angle){ 
     String strout;
     strout+= "1100"+String(sender)+String(receiver)+bitString(2,angle)+bitString(6,data)+"11";
     return strout;
