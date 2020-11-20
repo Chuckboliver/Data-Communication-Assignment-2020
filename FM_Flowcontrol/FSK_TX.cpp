@@ -1,5 +1,5 @@
 #include "FSK_TX.h"
-FSK::FSK()
+FSK::FSK(size_t dataSize)
 {
     dac.begin(0x62);
     if (not Serial)
@@ -9,7 +9,7 @@ FSK::FSK()
     inData = new char[dataSize];
 }
 
-FSK::TX_Flow()
+void FSK::TX_Flow()
 {   
     //Retrieve data input
     uint16_t lengths = 0;
