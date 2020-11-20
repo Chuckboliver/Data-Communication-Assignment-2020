@@ -1,6 +1,4 @@
 #include "Frame.h"
-#define sender 1  //config A or B
-#define receiver 0 //config A or B 
 
 void setup() {
   Serial.begin(9600);
