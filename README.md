@@ -26,7 +26,7 @@
 - 10 -> 8 cycles/baud
 - 11 -> 11 cycles/baud
 ## example:
-- dataframe from A to B data "0010" 
-> -> 1010001001010101<br />
-->10 10 00 10 01 01 01 01<br />
--> 8 8 3 8 5 5 5 5<br />
+- dataframe from A to B data "0010" angle -45degree 
+> -> 1100101000101011<br />
+->11 00 10 10 00 10 10 11<br />
+-> 11 3 8 8 3 8 8 11<br />
