@@ -12,7 +12,7 @@
  #include "WProgram.h"
 #endif
 #include<Wire.h>
-#include "Adafruit_MCP4725.h"
+#include <Adafruit_MCP4725.h>
 
 class FSK {
   public:

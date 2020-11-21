@@ -4,13 +4,13 @@ int allframe[30] ;
 void setup() {
   Serial.begin(9600);
   String test = Frame::enFrame(0,15,1);
-
+  
   Serial.print(test);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if(Serial.available()){
+  /*if(Serial.available()){
     String sIn = Serial.readStringUntil('\n');
     if(sIn.equals("INIT")){
       String data = Frame::enFrame(3,0,0);
@@ -40,12 +40,12 @@ void loop() {
   while(mode==1){
     waitforserial();//waiting for implementation
     if(available){
-
+      
       String receivedata = RX.read(); //w/ for implementation
       if(receivedata[receivedata.length()])
       String sender="",receiver="",datatype="";
       allframe[framecounter] = Frame::deframe(receivedata,datatype,sender,receiver);
       framecounter +=1;
     }
-  }
+  }*/
 }
