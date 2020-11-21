@@ -12,18 +12,13 @@ FSK::FSK(size_t dataSize)
 void FSK::TX_Flow(String Frame)
 {
   //Retrieve data input
-  uint16_t lengths = Frame.length();
-  for (size_t i = 0; i < lengths ; ++i)
-  {
-    inData[i] = inp[i];
-  }
-
   //Choose cycle and delay then send
-  for (size_t i = 0; i < lengths - 1; ++i)
+  for (size_t i = 0; i < Frame.length() - 1; ++i)
   {
-    for (size_t rounds = 7; rounds > 0; rounds -= 2)
+    for (size_t rounds = 15; rounds > 0; rounds -= 2)
     {
-      int twoBitData = inData[i] & 3;
+      int twoBitData = Frame.toInt() & 3;
+      Serial.print("TWOBITDATA : " + String(twoBitData));
       int usedDelay, cyclePerBaud;
       if (twoBitData = 0)
       {

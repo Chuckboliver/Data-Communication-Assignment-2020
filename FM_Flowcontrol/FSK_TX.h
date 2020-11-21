@@ -18,7 +18,7 @@ class FSK {
     int delay3 = (1000000 / f3 - 1000000 / defaultFreq) / 4;
     int setSample = 4;
     FSK(size_t dataSize);
-    void TX_Flow();
+    void TX_Flow(String);
        
 };
 #endif
