@@ -2,16 +2,16 @@
 ## Frame :
 ### Fixed Size/ Stop and Wait ARQ/ Bit-Oriented<br />
 1. **dataframe(16 bit):**<br />
--  flag{1} -seq{1}- control{2}  - data{8} - crc(x^3+x+1){3}  - flag{1}
-**flag{1}** -> 1<br />
-**seq{1}** -> 0 and 1 (stop and wait)<br />
-**control{2}** ->
-  - 00 -> DataFrame
-  - 01 ->  ACK
-  - 10 ->  U-Frame
+-  flag{1} -seq{1}- control{2}  - data{8} - crc(x^3+x+1){3}  - flag{1}<br />
+1.1) **flag{1}** -> 1<br />
+1.2) **seq{1}** -> 0 and 1 (stop and wait)<br />
+1.3) **control{2}** ->
+  >- 00 -> DataFrame<br />
+  > - 01 ->  ACK<br />
+  > - 10 ->  U-Frame<br />
 
-**data{8}**->
-    - 1). ข้อมูลสีสามมุม 3 เฟรม
+**data{8}**-><br />
+  - 1). ข้อมูลสีสามมุม 3 เฟรม
           ->"0000"+{bit of color(xxxx)}
    - 2). ACK frame -> "00000000"
   -  3). ข้อมูล ความเข้มสี 20 จุด
