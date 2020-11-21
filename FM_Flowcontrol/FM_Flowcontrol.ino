@@ -1,17 +1,81 @@
 #include "Frame.h"
-#include "FSK_TX.h"
+
+////////////////////////////////////FSK////////////////////////////////
+#define defaultFreq 1700
+#define f0 500
+#define f1 800
+#define f2 1100
+#define f3 1400
+#include<Wire.h>
+#include <Adafruit_MCP4725.h>
+Adafruit_MCP4725 dac;
+const uint16_t S_DAC[4] = {1000, 2000, 1000, 0};
+const int delay0 = (1000000 / f0 - 1000000 / defaultFreq) / 4;
+const int delay1 = (1000000 / f1 - 1000000 / defaultFreq) / 4;
+const int delay2 = (1000000 / f2 - 1000000 / defaultFreq) / 4;
+const int delay3 = (1000000 / f3 - 1000000 / defaultFreq) / 4;
+const int setSample = 4;
+int byteString2Int(String arrays){
+    int num = 0;
+    for(size_t i = 0 ; i < arrays.length() ; ++i){
+      //Serial.print((int)arrays[i]);
+      num  = (num + (int)arrays[i] - 48) * 2;
+    }
+    return num/2;
+  }
+void TX_Flow(String Frame) {
+  //Retrieve data input
+  //Choose cycle and delay then send
+  int SEND_BIN_DATA = byteString2Int(Frame);
+  Serial.println("Frame : " + Frame);
+  Serial.println("SEND_DATA : " + (String)SEND_BIN_DATA);
+  for (size_t rounds = 15; rounds > 0; rounds -= 2)
+  {
+    int twoBitData = SEND_BIN_DATA & 3;
+    Serial.print("TWOBITDATA : " + String(twoBitData));
+    int usedDelay, cyclePerBaud;
+    if (twoBitData == 0)
+    {
+      cyclePerBaud = 5;
+      usedDelay = delay0;
+    }
+    else if (twoBitData == 1)
+    {
+      cyclePerBaud = 8;
+      usedDelay = delay1;
+    }
+    else if (twoBitData == 2)
+    {
+      cyclePerBaud = 11;
+      usedDelay = delay2;
+    }
+    else
+    {
+      cyclePerBaud = 14;
+      usedDelay = delay3;
+    }
+    for (size_t nCycle = 0 ; nCycle < cyclePerBaud ; ++nCycle) {
+      for (size_t nSample = 0 ; nSample < setSample ; ++nSample) {
+        dac.setVoltage(S_DAC[nSample], false);
+      }
+    }
+  }
+  SEND_BIN_DATA >>= 2;
+  dac.setVoltage(0, false);
+}
+////////////////////////////////////FSK////////////////////////////////
+
 int mode = 0;
 int allframe[30] ;
 void setup() {
   Serial.begin(9600);
-  String test = Frame::enFrame(0,15,1);
-  
-  Serial.print(test);
+  String test = Frame::enFrame(0, 15, 1);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  FSK::TX_Flow("1011001");
+
+    TX_Flow("101");
   /*if(Serial.available()){
     String sIn = Serial.readStringUntil('\n');
     if(sIn.equals("INIT")){
@@ -38,16 +102,16 @@ void loop() {
         allframe[i] = 0;
       }
     }
-  }
-  while(mode==1){
+    }
+    while(mode==1){
     waitforserial();//waiting for implementation
     if(available){
-      
+
       String receivedata = RX.read(); //w/ for implementation
       if(receivedata[receivedata.length()])
       String sender="",receiver="",datatype="";
       allframe[framecounter] = Frame::deframe(receivedata,datatype,sender,receiver);
       framecounter +=1;
     }
-  }*/
+    }*/
 }
