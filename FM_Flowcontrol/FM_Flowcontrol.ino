@@ -1,4 +1,5 @@
 #include "Frame.h"
+#include "FSK_TX.h"
 int mode = 0;
 int allframe[30] ;
 void setup() {
@@ -10,6 +11,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+  FSK::TX_Flow("1011001");
   /*if(Serial.available()){
     String sIn = Serial.readStringUntil('\n');
     if(sIn.equals("INIT")){
