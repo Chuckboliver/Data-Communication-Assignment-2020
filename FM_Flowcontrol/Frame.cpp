@@ -15,5 +15,7 @@ static String Frame::bitString(int digit,int num){ //return String From num for 
     return strout; 
 }
 void Frame::deFrame(String strin,String* datatype,String* sender,String* receiver){
-    
+    /*if(strin[0]==1&&){
+
+    }*/
 }
