@@ -15,14 +15,14 @@ const int delay1 = (1000000 / f1 - 1000000 / defaultFreq) / 4;
 const int delay2 = (1000000 / f2 - 1000000 / defaultFreq) / 4;
 const int delay3 = (1000000 / f3 - 1000000 / defaultFreq) / 4;
 const int setSample = 4;
-int byteString2Int(String arrays){
-    int num = 0;
-    for(size_t i = 0 ; i < arrays.length() ; ++i){
-      //Serial.print((int)arrays[i]);
-      num  = (num + (int)arrays[i] - 48) * 2;
-    }
-    return num/2;
+int byteString2Int(String arrays) {
+  int num = 0;
+  for (size_t i = 0 ; i < arrays.length() ; ++i) {
+    //Serial.print((int)arrays[i]);
+    num  = (num + (int)arrays[i] - 48) * 2;
   }
+  return num / 2;
+}
 void TX_Flow(String Frame) {
   //Retrieve data input
   //Choose cycle and delay then send
@@ -75,43 +75,53 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-    TX_Flow("101");
-  /*if(Serial.available()){
-    String sIn = Serial.readStringUntil('\n');
-    if(sIn.equals("INIT")){
-      String data = Frame::enFrame(3,0,0);
-      Serial.print(data);//will change to send by FSK later
-      flushRX(); //w/ for implementation
-      long timer = millis();
-      while(mode == 0){
-        while(!availble){
-          if (millis() - current >= 3000){
-            Serial.println("Timeout");
-            Serial.print(data);//retransmit
-            flushRX();//w/ for implementation
-            timer = millis();
+  while (mode == 0) { //insert command INIT to start scan
+    if (Serial.available()) {
+      String sIn = Serial.readStringUntil('\n');
+      if (sIn.equals("INIT")) {
+        String data = Frame::enFrame(3, 0, 0);
+        Serial.print(data);//will change to send by FSK later
+        flushRX(); //w/ for implementation
+        long timer = millis();
+        while (mode == 0) {
+          while (!availble) {
+            if (millis() - current >= 3000) {
+              Serial.println("Timeout");
+              Serial.print(data);//retransmit
+              flushRX();//w/ for implementation
+              timer = millis();
+            }
+          }
+          String receiverack = RX.getString();//w/ for implementation
+          if (checkack()) { //check act is correctly receive w/ for implement
+            mode = 1;
           }
         }
-        String receiverack = RX.getString();//w/ for implementation
-        if(checkack()){//check act is correctly receive w/ for implement
-          mode =1;
+        int framecounter = 0;
+        for (int i = 0; i < allframe.length(); i++) { //reset frame array
+          allframe[i] = 0;
         }
       }
-      int framecounter = 0;
-      for(int i = 0;i<allframe.length();i++){//reset frame array
-        allframe[i] = 0;
-      }
     }
-    }
-    while(mode==1){
+  }
+  while (mode == 1) { //receiving data from sender
     waitforserial();//waiting for implementation
-    if(available){
+    if (available) {
 
       String receivedata = RX.read(); //w/ for implementation
-      if(receivedata[receivedata.length()])
-      String sender="",receiver="",datatype="";
-      allframe[framecounter] = Frame::deframe(receivedata,datatype,sender,receiver);
-      framecounter +=1;
+      if (receivedata[receivedata.length() - 1].equals("1")) {
+        mode = 2;
+      }
+      String sender = "", receiver = "", datatype = "";
+      allframe[framecounter] = Frame::deframe(receivedata, datatype, sender, receiver);
+      framecounter += 1;
+      displayalldata(); // w/ for implementation to display all code of color
     }
-    }*/
+  }
+  while (mode == 2) { //choose next command
+    if(Serial.available()){
+      String sIn = Serial.readStringUntil('\n');
+      
+    }
+  }
 }
