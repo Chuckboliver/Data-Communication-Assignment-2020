@@ -1,9 +1,7 @@
 #include "Frame.h"
 static String Frame::enFrame(int datatype,int data,int angle){
-    const uint8_t sender = 1; //config A or B
-    const uint8_t receiver = 0; //config A or B
     String strout;
-    strout+= "11"+bitString(2,datatype)+(String)sender+(String)receiver+bitString(2,angle)+bitString(6,data)+"11";
+    strout+= "11"+bitString(2,datatype)+(String)Frame::sender+(String)Frame::receiver+bitString(2,angle)+bitString(6,data)+"11";
     return strout; 
 }
 static String Frame::bitString(int digit,int num){ //return String From num for selected digit

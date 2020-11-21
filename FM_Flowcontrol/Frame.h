@@ -11,8 +11,8 @@
 #define all 3 //all->11
 class Frame{
     public:
-        const uint8_t sender = 1; //config A or B
-        const uint8_t receiver = 0; //config A or B
+        static const uint8_t sender = 1; //config A or B
+        static const uint8_t receiver = 0; //config A or B
         static String enFrame(int ,int ,int);
         static void deFrame(String,String*,String*,String*);
         static String bitString(int,int);

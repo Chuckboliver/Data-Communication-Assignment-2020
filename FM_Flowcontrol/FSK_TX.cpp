@@ -1,56 +1,43 @@
 #include "FSK_TX.h"
-FSK::FSK(size_t dataSize)
-{
-  dac.begin(0x62);
-  if (not Serial)
-  {
-    Serial.begin(115200);
-  }
-  inData = new char[dataSize];
-}
-
-void FSK::TX_Flow(String Frame)
+static void FSK::TX_Flow(String Frame)
 {
   //Retrieve data input
   //Choose cycle and delay then send
-  for (size_t i = 0; i < Frame.length() - 1; ++i)
-  {
-    for (size_t rounds = 15; rounds > 0; rounds -= 2)
-    {
-      int twoBitData = Frame.toInt() & 3;
-      Serial.print("TWOBITDATA : " + String(twoBitData));
-      int usedDelay, cyclePerBaud;
-      if (twoBitData = 0)
-      {
-        cyclePerBaud = 5;
-        usedDelay = delay0;
-      }
-      else if (twoBitData == 1)
-      {
-        cyclePerBaud = 8;
-        usedDelay = delay1;
-      }
-      else if (twoBitData == 2)
-      {
-        cyclePerBaud = 11;
-        usedDelay = delay2;
-      }
-      else
-      {
-        cyclePerBaud = 14;
-        usedDelay = delay3;
-      }
 
-      for (size_t nCycle = 0; nCycle < cyclePerBaud; ++nCycle)
-      {
-        for (size_t nSample = 0; nSample < setSample; ++nSample)
-        {
-          dac.setVoltage(S_DAC[nSample], false);
-          delayMicroseconds(usedDelay);
-        }
+  int SEND_BIN_DATA = Frame.toInt();
+  Serial.println("SEND_DATA : " + (String)SEND_BIN_DATA);
+  for (int rounds = 15; rounds > 0; rounds -= 2)
+  {
+   int twoBitData = SEND_BIN_DATA & 3;
+    Serial.print("TWOBITDATA : " + String(twoBitData));
+    int usedDelay, cyclePerBaud;
+  
+    if (twoBitData == 0)
+    {
+      cyclePerBaud = 5;
+      usedDelay = delay0;
+    }
+    else if (twoBitData == 1)
+    {
+      cyclePerBaud = 8;
+      usedDelay = delay1;
+    }
+    else if (twoBitData == 2)
+    {
+      cyclePerBaud = 11;
+      usedDelay = delay2;
+    }
+    else
+    {
+      cyclePerBaud = 14;
+      usedDelay = delay3;
+    }
+    for(int nCycle = 0 ; nCycle < cyclePerBaud ; nCycle++){
+      for(int nSample = 0 ; nSample < FSK::setSample ; nSample++){
+        FSK::dac.setVoltage(FSK::S_DAC[nSample], false);
       }
     }
-    inData[i] >>= 2;
   }
-  dac.setVoltage(0, false);
+  SEND_BIN_DATA >>= 2;
+  FSK::dac.setVoltage(0, false);
 }
