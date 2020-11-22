@@ -161,15 +161,20 @@ void loop() {
     UFrame = Frame::make_UFrame(0); // send setframe
     TX_Flow(UFrame);
     //flushRX(); //w/ for implementation
-    int receiveACK = RX_Flow(UFrame, true);
-    while (receiveACK == NULL) {
-      receiveACK = RX_Flow(UFrame, true);
+    int receiveData = RX_Flow(UFrame, true);
+    while (receiveData == NULL) {
+      receiveData = RX_Flow(UFrame, true);
     }
     String ctrl, seq;
-    String inp = Frame::decodeFrame(Frame::BINtoString(16, receiveACK), ctrl, seq);
-    if (ctrl.equals("01")) { //check act is correctly receive
-      mode = 1;
+    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
+    if (ctrl.equals("00")) {
+      if (seq.equals((String)myseq) and not decodedFrame.equals("Error")) {
+        frame_arr[framecounter] = decodedFrame;
+        myseq = (myseq + 1) % 2;
+      }
     }
+    String ACKFrame = Frame::make_ackFrame(myseq);
+    TX_Flow(ACKFrame);
     framecounter = 0;
     for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
       frame_arr[i] = "";

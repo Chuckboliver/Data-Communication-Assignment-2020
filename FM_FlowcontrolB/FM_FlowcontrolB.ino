@@ -158,11 +158,14 @@ void loop() {
       if (decodeddata.equals("00000000")) {
         Serial.println("UFrame Received : "+ReceiveU);
         mode = 0;
-        String ACK = Frame::make_ackFrame(myseq);
-        TX_Flow(ACK);
-        
       }
     }
 
   }
+  while(mode == 0){
+    //CAMERA
+    TX_Flow(Frame::make_dataFrame(0, myseq));
+    mode = -1;
+  }
+  
 }
