@@ -110,7 +110,7 @@ void RX_Flow() {
         BAUD_COUNT = 0;
         BIT_CHECK = -1;
       }
-      BAUD_CHECK = false;
+      CHECK_BAUD = false;
       countCycle = 0;
     }
   }
