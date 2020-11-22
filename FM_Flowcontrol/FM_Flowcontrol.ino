@@ -33,14 +33,16 @@ bool CHECK_AMPLITUDE = false;
 bool CHECK_BAUD = false;
 uint32_t BAUD_BEGIN_TIME = 0;
 ////RX------VAR///////////
-int byteString2Int(String arrays){
-    int num = 0;
-    for(size_t i = 0 ; i < arrays.length() ; ++i){
-      //Serial.print((int)arrays[i]);
-      num  = (num + (int)arrays[i] - 48) * 2;
-    }
-    return num/2;
+int byteString2Int(String arrays) {
+  int num = 0;
+  for (size_t i = 0 ; i < arrays.length() ; ++i) {
+    //Serial.print((int)arrays[i]);
+    num  = (num + (int)arrays[i] - 48) * 2;
   }
+  return num / 2;
+}
+
+
 void TX_Flow(String Frame) {
   //Retrieve data input
   //Choose cycle and delay then send
@@ -83,26 +85,26 @@ void TX_Flow(String Frame) {
   dac.setVoltage(0, false);
 }
 
-void RX_Flow(){
+void RX_Flow() {
   int Voltage = analogRead(A3);//Read analog from analog pin
-  if(Voltage > r_slope and previousVoltage < r_slope and not CHECK_AMPLITUDE){ //Found amplitude -> Found Baud
+  if (Voltage > r_slope and previousVoltage < r_slope and not CHECK_AMPLITUDE) { //Found amplitude -> Found Baud
     CHECK_AMPLITUDE = true;
-    if(not CHECK_BAUD){
+    if (not CHECK_BAUD) {
       BAUD_BEGIN_TIME = micros();
       BIT_CHECK++;
     }
   }
-  if(Voltage > r_slope and CHECK_AMPLITUDE){ // Count cycle
+  if (Voltage > r_slope and CHECK_AMPLITUDE) { // Count cycle
     countCycle++;
     CHECK_BAUD = true;
     CHECK_AMPLITUDE = true;
   }
-  if(Voltage < r_slope and CHECK_BAUD){
-    if(micros() - BAUD_BEGIN_TIME > 9900){
+  if (Voltage < r_slope and CHECK_BAUD) {
+    if (micros() - BAUD_BEGIN_TIME > 9900) {
       uint16_t twoBitData = (((countCycle - 5) / 3 ) & 3 ) << (BIT_CHECK * 2);
       DATA |= twoBitData;
       BAUD_COUNT++;
-      if(BAUD_COUNT == 8){
+      if (BAUD_COUNT == 8) {
         Serial.println("RECIEVE FRAME : " + (String)DATA);
         DATA = 0;
         BAUD_COUNT = 0;
@@ -115,57 +117,116 @@ void RX_Flow(){
   previousVoltage = Voltage;
 }
 ////////////////////////////////////FSK////////////////////////////////
-
-int mode = 0;
-int allframe[30] ;
+int myseq = 0;
+int mode = -1;
+int angle = -1;
+String frame_arr[30] ;
+int framecounter = 0;
 void setup() {
   Serial.begin(9600);
   sbi(ADCSRA, ADPS2); // this for increase analogRead speed
   cbi(ADCSRA, ADPS1);
   cbi(ADCSRA, ADPS0);
-  String test = Frame::enFrame(0, 15, 1);
+  String test = Frame::make_UFrame(0);
+  Serial.print("Press Enter to Scan all data");
   Serial.flush();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-    TX_Flow("101");
-  /*if(Serial.available()){
-    String sIn = Serial.readStringUntil('\n');
-    if(sIn.equals("INIT")){
-      String data = Frame::enFrame(3,0,0);
-      Serial.print(data);//will change to send by FSK later
-      flushRX(); //w/ for implementation
-      long timer = millis();
-      while(mode == 0){
-        while(!availble){
-          if (millis() - current >= 3000){
-            Serial.println("Timeout");
-            Serial.print(data);//retransmit
-            flushRX();//w/ for implementation
-            timer = millis();
+  while (mode == -1) {
+    if (Serial.available()) {
+      while (Serial.available()) {
+        uint8_t temp = Serial.read();
+      }
+    }
+  }
+  while (mode == 0) { //insert command INIT to start scan
+
+    String data = Frame::make_UFrame(0); // send setframe
+    TX_Flow(data);
+    //flushRX(); //w/ for implementation
+    long timer = millis();
+    while (mode == 0) {
+      while (!Serial.available()) {//w/ for datain
+        if (millis() - timer >= 3000) {
+          Serial.println("Timeout...retransmiting");
+          TX_Flow(data);//retransmit
+          //flushRX();//w/ for implementation
+          timer = millis();
+        }
+      }
+      String receiverack;// = RX.getString();//w/ for implementation
+      String ctrl, seq;
+      String inp = Frame::decodeFrame(receiverack, &ctrl, &seq);
+      if (ctrl.equals("01")) { //check act is correctly receive
+        mode = 1;
+      }
+    }
+    framecounter = 0;
+    for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
+      frame_arr[i] = "";
+    }
+    timer = millis();
+  }
+
+  while (mode == 1) { //receiving data from sender
+    //waitforserial();//waiting for implementation
+    if (Serial.available()) {//available from read
+
+      String receivedata;// = RX.read(); //w/ for implementation
+      String seq, ctrl;
+      String decodeddata = Frame::decodeFrame(receivedata, &ctrl, &seq);
+      if (seq.equals(String(myseq))) {
+        if (!decodeddata.equals("Error")) {
+          frame_arr[framecounter] = decodeddata;
+          framecounter += 1;
+          myseq = (myseq + 1) % 2;
+          String ACK = Frame::make_ackFrame(myseq);
+          TX_Flow(ACK);
+          long timer = millis();
+          while (!Serial.available()) {
+            if (millis() - timer > 3000) {
+              Serial.println("Timeout...retransmiting");
+              TX_Flow(ACK);
+              //flushRX();//w/ for implementation
+              timer = millis();
+            }
           }
         }
-        String receiverack = RX.getString();//w/ for implementation
-        if(checkack()){//check act is correctly receive w/ for implement
-          mode =1;
-        }
-      }
-      int framecounter = 0;
-      for(int i = 0;i<allframe.length();i++){//reset frame array
-        allframe[i] = 0;
       }
     }
+    if (framecounter == 2) {
+      mode = 2;
+      framecounter = 0;
+      //displayalldata();//w/ for implementation
     }
-    while(mode==1){
-    waitforserial();//waiting for implementation
-    if(available){
+  }
+  while (mode == 2) { //choose next command
+    if (Serial.available()) {
+      String readin = Serial.readStringUntil('\n');
+      if (readin.equals("0")) { //reset scanning
+        Serial.println("rescanning");
+        mode = 0;
+      } else if (readin.equals("1")) {//get -45 data
+        Serial.println("scanning -45");
+        angle = 1;
+        mode = 3;
+      } else if (readin.equals("2")) {//get -45 data
+        Serial.println("scanning 0");
+        angle = 2;
+        mode = 3;
+      } else if (readin.equals("3")) {//get -45 data
+        Serial.println("scanning +45");
+        angle = 3;
+        mode = 3;
+      } else {
+        Serial.println("Wrong Input");
+      }
 
-      String receivedata = RX.read(); //w/ for implementation
-      if(receivedata[receivedata.length()])
-      String sender="",receiver="",datatype="";
-      allframe[framecounter] = Frame::deframe(receivedata,datatype,sender,receiver);
-      framecounter +=1;
     }
-    }*/
+  }
+  while (mode == 3) {
+
+  }
 }

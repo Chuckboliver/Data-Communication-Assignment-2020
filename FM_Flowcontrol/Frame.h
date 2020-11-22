@@ -11,10 +11,12 @@
 #define all 3 //all->11
 class Frame{
     public:
-        static const uint8_t sender = 1; //config A or B
-        static const uint8_t receiver = 0; //config A or B
-        static String enFrame(int ,int ,int);
-        static void deFrame(String,String*,String*,String*);
-        static String bitString(int,int);
+    
+        
+        static String make_dataFrame(int,int);
+        static String make_ackFrame(int);
+        static String make_UFrame(int);
+        static String decodeFrame(String,String*,String*);
+        static String BINtoString(int,int);
 };
 #endif
