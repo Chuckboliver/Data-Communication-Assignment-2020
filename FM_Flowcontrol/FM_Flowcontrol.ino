@@ -200,7 +200,7 @@ void loop() {
       myseq = 0;
     }
   }
-  while(mode == 4){
+  while (mode == 4) {
     //waitforserial();//waiting for implementation
     if (Serial.available()) {//available from read
 
