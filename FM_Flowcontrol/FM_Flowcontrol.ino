@@ -64,65 +64,75 @@ void TX_Flow(String Frame) {
   dac.setVoltage(0, false);
 }
 ////////////////////////////////////FSK////////////////////////////////
-int seq=0;
+int myseq = 0;
 int mode = 0;
-int allframe[30] ;
+String frame_arr[30] ;
+int framecounter = 0;
 void setup() {
   Serial.begin(9600);
   String test = Frame::make_UFrame(0);
-  
+  Serial.print("Press Enter to Scan all data");
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-  /*while (mode == 0) { //insert command INIT to start scan
+  while (mode == 0) { //insert command INIT to start scan
     if (Serial.available()) {
-      String sIn = Serial.readStringUntil('\n');
-      if (sIn.equals("INIT")) {
-        String data = Frame::make_dataFrame(3);
-        Serial.print(data);//will change to send by FSK later
-        flushRX(); //w/ for implementation
-        long timer = millis();
-        while (mode == 0) {
-          while (!availble) {
-            if (millis() - current >= 3000) {
-              Serial.println("Timeout");
-              Serial.print(data);//retransmit
-              flushRX();//w/ for implementation
-              timer = millis();
-            }
-          }
-          String receiverack = RX.getString();//w/ for implementation
-          if (checkack()) { //check act is correctly receive w/ for implement
-            mode = 1;
-          }
-        }
-        int framecounter = 0;
-        for (int i = 0; i < allframe.length(); i++) { //reset frame array
-          allframe[i] = 0;
-        }
+      while (Serial.available()) {
+        uint8_t temp = Serial.read();
       }
+      String data = Frame::make_UFrame(0); // send setframe
+      TX_Flow(data);
+      //flushRX(); //w/ for implementation
+      long timer = millis();
+      while (mode == 0) {
+        while (!Serial.available()) {//w/ for datain
+          if (millis() - timer >= 3000) {
+            Serial.println("Timeout");
+            TX_Flow(data);//retransmit
+            //flushRX();//w/ for implementation
+            timer = millis();
+          }
+        }
+        String receiverack;// = RX.getString();//w/ for implementation
+        String ctrl, seq;
+        String inp = Frame::decodeFrame(receiverack, &ctrl, &seq);
+        if (ctrl.equals("01")) { //check act is correctly receive
+        mode = 1;
+      }
+    }
+    framecounter = 0;
+    for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
+        frame_arr[i] = "";
+      }
+    timer = millis();
     }
   }
   while (mode == 1) { //receiving data from sender
-    waitforserial();//waiting for implementation
-    if (available) {
+    //waitforserial();//waiting for implementation
+    if (Serial.available()) {//available from read
 
-      String receivedata = RX.read(); //w/ for implementation
-      if (receivedata[receivedata.length() - 1].equals("1")) {
-        mode = 2;
+      String receivedata;// = RX.read(); //w/ for implementation
+      String seq, ctrl;
+      String decodeddata = Frame::decodeFrame(receivedata, &ctrl, &seq);
+      if (seq.equals(String(myseq))) {
+      if (!decodeddata.equals("Error")) {
+          frame_arr[framecounter] = decodeddata;
+          framecounter += 1;
+          long timer = millis();
+        }
       }
-      String sender = "", receiver = "", datatype = "";
-      allframe[framecounter] = Frame::deframe(receivedata, datatype, sender, receiver);
-      framecounter += 1;
-      displayalldata(); // w/ for implementation to display all code of color
+    }
+    if (framecounter == 2) {
+      mode = 2;
+      framecounter = 0;
     }
   }
   while (mode == 2) { //choose next command
-    if(Serial.available()){
+    if (Serial.available()) {
       String sIn = Serial.readStringUntil('\n');
-      
+
     }
-  }*/
+  }
 }

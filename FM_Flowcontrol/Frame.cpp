@@ -24,7 +24,7 @@ static String Frame::make_UFrame(int code) { // 0 reset ->1 get -45->2 get 0->3 
   strout += "1010" + BINtoString(11, code) + "1"; //will implement crc later
   return strout;
 }
-static String Frame::decodeFrame(String strin, String &ctrl, String &seq) {
+static String Frame::decodeFrame(String strin, String* ctrl, String* seq) {
   //for U Frame use ctrl+seq to check "010" to check command
   String encodeddata;
   seq = strin[1];
