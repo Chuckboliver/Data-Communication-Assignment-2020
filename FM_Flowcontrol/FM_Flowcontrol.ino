@@ -245,7 +245,7 @@ void loop() {
   while (mode == 4) {
     //waitforserial();//waiting for implementation
     int receiveData = RX_Flow("", false);
-    while (receiveACK == NULL) {
+    while (receiveData == NULL) {
       receiveData = RX_Flow("", false);
     }
     String seq, ctrl;
