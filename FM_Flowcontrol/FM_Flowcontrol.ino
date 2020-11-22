@@ -27,35 +27,37 @@ const int setSample = 4;
 int previousVoltage = 0;
 int countCycle = 0;
 uint16_t BAUD_COUNT = 0;
-uint16_t DATA = 0;
+uint32_t DATA = 0;
 uint16_t BIT_CHECK = -1;
 bool CHECK_AMPLITUDE = false;
 bool CHECK_BAUD = false;
 uint32_t BAUD_BEGIN_TIME = 0;
 ////RX------VAR///////////
-int byteString2Int(String arrays) {
-  int num = 0;
+uint32_t byteString2Int(String arrays) {
+  uint32_t num = 0;
   for (size_t i = 0 ; i < arrays.length() ; ++i) {
     //Serial.print((int)arrays[i]);
-    num  = (num + (int)arrays[i] - 48) * 2;
+    num  = (num + (uint32_t)arrays[i] - 48) * 2;
   }
   return num / 2;
 }
-bool Timer(long currentTime, long interval) {
+bool Timer(unsigned long currentTime, unsigned long interval) {
   return millis() - currentTime < interval;
 }
 
 void TX_Flow(String Frame) {
   //Retrieve data input
   //Choose cycle and delay then send
-  int SEND_BIN_DATA = byteString2Int(Frame);
+  uint32_t SEND_BIN_DATA = byteString2Int(Frame);
+  //Serial.println("test " + (String)byteString2Int("1111111111111111"));
   Serial.println("Frame : " + Frame);
   Serial.println("SEND_DATA : " + (String)SEND_BIN_DATA);
-  for (size_t rounds = 15; rounds > 0; rounds -= 2)
+  for (int rounds = 15; rounds > 0; rounds -= 2)
   {
-    int twoBitData = SEND_BIN_DATA & 3;
-    Serial.println("TWOBITDATA : " + (String)twoBitData);
-    int usedDelay, cyclePerBaud;
+    //Serial.println("Round : " + (String)rounds);
+    uint32_t twoBitData = SEND_BIN_DATA & 3;
+    //Serial.println("TWOBITDATA : " + (String)twoBitData);
+    uint32_t usedDelay, cyclePerBaud;
     if (twoBitData == 0)
     {
       cyclePerBaud = 5;
@@ -78,25 +80,27 @@ void TX_Flow(String Frame) {
     }
     for (size_t nCycle = 0 ; nCycle < cyclePerBaud ; ++nCycle) {
       for (size_t nSample = 0 ; nSample < setSample ; ++nSample) {
+        //Serial.println(S_DAC[nSample]);
         dac.setVoltage(S_DAC[nSample], false);
         delayMicroseconds(usedDelay);
       }
     }
+    SEND_BIN_DATA >>= 2;
   }
-  SEND_BIN_DATA >>= 2;
   dac.setVoltage(0, false);
 }
 
-int RX_Flow(String resendFrame, bool RESEND) {
+uint16_t RX_Flow(String resendFrame, bool RESEND) {
+  unsigned long currentTime = millis();
   while (BAUD_COUNT < 8) {
-    if (Timer(millis(), 3000) == false and RESEND) { // Timer : if time out resend last frame.
+    if (not Timer(currentTime, 3000) and RESEND) { // Timer : if time out resend last frame.
       Serial.println("Time out!!!");
       Serial.println("Resend Frame : " + resendFrame);
       TX_Flow(resendFrame);
       return NULL;
     }
 
-    int Voltage = analogRead(A3);//Read analog from analog pin
+    uint32_t Voltage = analogRead(A3);//Read analog from analog pin
     if (Voltage > r_slope and previousVoltage < r_slope and not CHECK_AMPLITUDE) { //Found amplitude -> Found Baud
       CHECK_AMPLITUDE = true;
       if (not CHECK_BAUD) {
@@ -107,19 +111,26 @@ int RX_Flow(String resendFrame, bool RESEND) {
     if (Voltage > r_slope and CHECK_AMPLITUDE) { // Count cycle
       countCycle++;
       CHECK_BAUD = true;
-      CHECK_AMPLITUDE = true;
+      CHECK_AMPLITUDE = false;
     }
     if (Voltage < r_slope and CHECK_BAUD) {
       if (micros() - BAUD_BEGIN_TIME > 9900) {
-        uint16_t twoBitData = (((countCycle - 5) / 3 ) & 3 ) << (BIT_CHECK * 2);
+        //Serial.println("DATA : "+Frame::BINtoString(16, DATA));
+        //Serial.println("nCyvle" + (String)countCycle);
+        uint32_t twoBitData = (((countCycle - 5) / 3 ) & 3 ) << (BIT_CHECK * 2);
+        //Serial.println("TWOBIT : "+(String)twoBitData);
         DATA |= twoBitData;
         BAUD_COUNT++;
         if (BAUD_COUNT == 8) {
-          Serial.println("RECIEVE FRAME : " + (String)DATA);
+          //Serial.println("DATA : " + (String)DATA);
+          Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, DATA));
+          uint32_t outputData = DATA;
           DATA = 0;
           BAUD_COUNT = 0;
           BIT_CHECK = -1;
-          return DATA; /// return Frame data as INT
+          countCycle = 0;
+          CHECK_BAUD = false;
+          return (uint16_t)outputData; /// return Frame data as INT
         }
         CHECK_BAUD = false;
         countCycle = 0;
@@ -137,37 +148,43 @@ String UFrame;
 int framecounter = 0;
 long timer;
 void setup() {
-  Serial.begin(115200);
+  dac.begin(0x62);
+  Serial.begin(9600);
   sbi(ADCSRA, ADPS2); // this for increase analogRead speed
   cbi(ADCSRA, ADPS1);
   cbi(ADCSRA, ADPS0);
-  String test = Frame::make_UFrame(0);
   Serial.print("Press Enter to Scan all data");
   Serial.flush();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  while (mode == -1) {
+  if (mode == -1) {
 
     if (Serial.available()) {
       while (Serial.available()) {
         uint8_t temp = Serial.read();
       }
       mode = 0;
+      Serial.println("CHANGE TO MODE 0");
     }
   }
-  while (mode == 0) { //sendUframe to scan/rescan
+  if (mode == 0) { //sendUframe to scan/rescan
     UFrame = Frame::make_UFrame(0); // send setframe
     TX_Flow(UFrame);
+    Serial.println("TX_COMPLETE!");
     //flushRX(); //w/ for implementation
     int receiveData = RX_Flow(UFrame, true);
     while (receiveData == NULL) {
       receiveData = RX_Flow(UFrame, true);
     }
+    Serial.println("TX_COMPLETE2!");
     String ctrl, seq;
+    
     String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
     if (ctrl.equals("00")) {
+      mode = 1;
+      Serial.println("CHANGE TO MODE 1");
       if (seq.equals((String)myseq) and not decodedFrame.equals("Error")) {
         frame_arr[framecounter] = decodedFrame;
         myseq = (myseq + 1) % 2;
@@ -179,9 +196,10 @@ void loop() {
     for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
       frame_arr[i] = "";
     }
+   
   }
 
-  while (mode == 1) { //receiving data from sender
+  if (mode == 1) { //receiving data from sender
     //waitforserial();//waiting for implementation
 
     int ReceiveData = RX_Flow("", false);
@@ -202,10 +220,11 @@ void loop() {
     if (framecounter == 3) {
       mode = 2;
       framecounter = 0;
+      Serial.println("CHANGE TO MODE 2");
       //displayalldata();//w/ for implementation
     }
   }
-  while (mode == 2) { //wait for next command
+  if (mode == 2) { //wait for next command
     if (Serial.available()) {
       String readin = Serial.readStringUntil('\n');
       if (readin.equals("0")) { //reset scanning
@@ -235,7 +254,7 @@ void loop() {
 
     }
   }
-  while (mode == 3) { //send specific scan command
+  if (mode == 3) { //send specific scan command
     int receiveACK = RX_Flow(UFrame, true);
     while (receiveACK == NULL) {
       receiveACK = RX_Flow(UFrame, true);
@@ -247,7 +266,7 @@ void loop() {
       myseq = 0;
     }
   }
-  while (mode == 4) {
+  if (mode == 4) {
     //waitforserial();//waiting for implementation
     int receiveData = RX_Flow("", false);
     while (receiveData == NULL) {

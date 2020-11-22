@@ -29,7 +29,7 @@ static String Frame::decodeFrame(String strin, String& ctrl, String& seq) {
   String encodeddata;
   seq = seq+ String(strin[1]);
   ctrl = ctrl + String(strin[2])+String(strin[3]);
-  for(int i=4;i<=14;i++){
+  for(int i=4;i<=11;i++){
     encodeddata += String(strin[i]);
   }
   /*if(!decodeCRC(encodeddata)==-1){//w/ for new crc implementation
@@ -37,5 +37,5 @@ static String Frame::decodeFrame(String strin, String& ctrl, String& seq) {
   }else{
     return "Error";
   }*/
-  return "";
+  return encodeddata;
 }
