@@ -54,7 +54,7 @@ void TX_Flow(String Frame) {
   for (size_t rounds = 15; rounds > 0; rounds -= 2)
   {
     int twoBitData = SEND_BIN_DATA & 3;
-    Serial.print("TWOBITDATA : " + String(twoBitData));
+    Serial.println("TWOBITDATA : " + (String)twoBitData);
     int usedDelay, cyclePerBaud;
     if (twoBitData == 0)
     {
