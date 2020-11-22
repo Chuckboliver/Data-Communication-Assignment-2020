@@ -137,7 +137,7 @@ String UFrame;
 int framecounter = 0;
 long timer;
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   sbi(ADCSRA, ADPS2); // this for increase analogRead speed
   cbi(ADCSRA, ADPS1);
   cbi(ADCSRA, ADPS0);
