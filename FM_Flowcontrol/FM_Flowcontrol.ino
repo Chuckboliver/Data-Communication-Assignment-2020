@@ -65,7 +65,8 @@ void TX_Flow(String Frame) {
 }
 ////////////////////////////////////FSK////////////////////////////////
 int myseq = 0;
-int mode = 0;
+int mode = -1;
+int angle = -1;
 String frame_arr[30] ;
 int framecounter = 0;
 void setup() {
@@ -76,39 +77,42 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
-  while (mode == 0) { //insert command INIT to start scan
+  while (mode == -1) {
     if (Serial.available()) {
       while (Serial.available()) {
         uint8_t temp = Serial.read();
       }
-      String data = Frame::make_UFrame(0); // send setframe
-      TX_Flow(data);
-      //flushRX(); //w/ for implementation
-      long timer = millis();
-      while (mode == 0) {
-        while (!Serial.available()) {//w/ for datain
-          if (millis() - timer >= 3000) {
-            Serial.println("Timeout");
-            TX_Flow(data);//retransmit
-            //flushRX();//w/ for implementation
-            timer = millis();
-          }
+    }
+  }
+  while (mode == 0) { //insert command INIT to start scan
+
+    String data = Frame::make_UFrame(0); // send setframe
+    TX_Flow(data);
+    //flushRX(); //w/ for implementation
+    long timer = millis();
+    while (mode == 0) {
+      while (!Serial.available()) {//w/ for datain
+        if (millis() - timer >= 3000) {
+          Serial.println("Timeout...retransmiting");
+          TX_Flow(data);//retransmit
+          //flushRX();//w/ for implementation
+          timer = millis();
         }
-        String receiverack;// = RX.getString();//w/ for implementation
-        String ctrl, seq;
-        String inp = Frame::decodeFrame(receiverack, &ctrl, &seq);
-        if (ctrl.equals("01")) { //check act is correctly receive
+      }
+      String receiverack;// = RX.getString();//w/ for implementation
+      String ctrl, seq;
+      String inp = Frame::decodeFrame(receiverack, &ctrl, &seq);
+      if (ctrl.equals("01")) { //check act is correctly receive
         mode = 1;
       }
     }
     framecounter = 0;
     for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
-        frame_arr[i] = "";
-      }
-    timer = millis();
+      frame_arr[i] = "";
     }
+    timer = millis();
   }
+
   while (mode == 1) { //receiving data from sender
     //waitforserial();//waiting for implementation
     if (Serial.available()) {//available from read
@@ -117,22 +121,55 @@ void loop() {
       String seq, ctrl;
       String decodeddata = Frame::decodeFrame(receivedata, &ctrl, &seq);
       if (seq.equals(String(myseq))) {
-      if (!decodeddata.equals("Error")) {
+        if (!decodeddata.equals("Error")) {
           frame_arr[framecounter] = decodeddata;
           framecounter += 1;
+          myseq = (myseq + 1) % 2;
+          String ACK = Frame::make_ackFrame(myseq);
+          TX_Flow(ACK);
           long timer = millis();
+          while (!Serial.available()) {
+            if (millis() - timer > 3000) {
+              Serial.println("Timeout...retransmiting");
+              TX_Flow(ACK);
+              //flushRX();//w/ for implementation
+              timer = millis();
+            }
+          }
         }
       }
     }
     if (framecounter == 2) {
       mode = 2;
       framecounter = 0;
+      //displayalldata();//w/ for implementation
     }
   }
   while (mode == 2) { //choose next command
     if (Serial.available()) {
-      String sIn = Serial.readStringUntil('\n');
+      String readin = Serial.readStringUntil('\n');
+      if (readin.equals("0")) { //reset scanning
+        Serial.println("rescanning");
+        mode = 0;
+      } else if (readin.equals("1")) {//get -45 data
+        Serial.println("scanning -45");
+        angle = 1;
+        mode = 3;
+      } else if (readin.equals("2")) {//get -45 data
+        Serial.println("scanning 0");
+        angle = 2;
+        mode = 3;
+      } else if (readin.equals("3")) {//get -45 data
+        Serial.println("scanning +45");
+        angle = 3;
+        mode = 3;
+      } else {
+        Serial.println("Wrong Input");
+      }
 
     }
+  }
+  while (mode == 3) {
+
   }
 }
