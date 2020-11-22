@@ -54,7 +54,7 @@ void TX_Flow(String Frame) {
   for (size_t rounds = 15; rounds > 0; rounds -= 2)
   {
     int twoBitData = SEND_BIN_DATA & 3;
-    Serial.println("TWOBITDATA : " + (String)twoBitData);
+    Serial.println("TWOBITDATA : " + String(twoBitData));
     int usedDelay, cyclePerBaud;
     if (twoBitData == 0)
     {
@@ -141,131 +141,28 @@ void setup() {
   sbi(ADCSRA, ADPS2); // this for increase analogRead speed
   cbi(ADCSRA, ADPS1);
   cbi(ADCSRA, ADPS0);
-  String test = Frame::make_UFrame(0);
-  Serial.print("Press Enter to Scan all data");
-  Serial.flush();
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  while (mode == -1) {
-
-    if (Serial.available()) {
-      while (Serial.available()) {
-        uint8_t temp = Serial.read();
-      }
-      mode = 0;
-    }
-  }
-  while (mode == 0) { //sendUframe to scan/rescan
-    UFrame = Frame::make_UFrame(0); // send setframe
-    TX_Flow(UFrame);
-    //flushRX(); //w/ for implementation
-    int receiveACK = RX_Flow(UFrame, true);
-    while (receiveACK == NULL) {
-      receiveACK = RX_Flow(UFrame, true);
-    }
-    String ctrl, seq;
-    String inp = Frame::decodeFrame(Frame::BINtoString(16, receiveACK), ctrl, seq);
-    if (ctrl.equals("01")) { //check act is correctly receive
-      mode = 1;
-    }
-    framecounter = 0;
-    for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
-      frame_arr[i] = "";
-    }
-  }
-
-  while (mode == 1) { //receiving data from sender
-    //waitforserial();//waiting for implementation
-
-    int ReceiveData = RX_Flow("", false);
-    while (ReceiveData == NULL) {
-      ReceiveData = RX_Flow("", false);
+  while ( mode == -1) {
+    int ReceiveU = RX_Flow("", false);
+    while (ReceiveU == NULL) {
+      ReceiveU = RX_Flow("", false);
     }
     String seq, ctrl;
-    String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, ReceiveData), ctrl, seq);
-    if (seq.equals(String(myseq))) {
-      if (!decodeddata.equals("Error")) {
-        frame_arr[framecounter] = decodeddata;
-        framecounter += 1;
-        myseq = (myseq + 1) % 2;
-      }
-    }
-    String ACK = Frame::make_ackFrame(myseq);
-    TX_Flow(ACK);
-    if (framecounter == 3) {
-      mode = 2;
-      framecounter = 0;
-      //displayalldata();//w/ for implementation
-    }
-  }
-  while (mode == 2) { //wait for next command
-    if (Serial.available()) {
-      String readin = Serial.readStringUntil('\n');
-      if (readin.equals("0")) { //reset scanning
-        Serial.println("rescanning");
+    String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, ReceiveU), ctrl, seq);
+    String Uctrl = seq + ctrl;
+    if (Uctrl == "010") {
+      if (decodeddata.equals("00000000")) {
+        Serial.println("UFrame Received : "+ReceiveU);
         mode = 0;
-      } else if (readin.equals("1")) {//get -45 data
-        Serial.println("scanning -45");
-        angle = 1;
-        mode = 3;
-        UFrame = Frame::make_UFrame(angle);
-        TX_Flow(UFrame);
-      } else if (readin.equals("2")) {//get -45 data
-        Serial.println("scanning 0");
-        angle = 2;
-        mode = 3;
-        UFrame = Frame::make_UFrame(angle);
-        TX_Flow(UFrame);
-      } else if (readin.equals("3")) {//get -45 data
-        Serial.println("scanning +45");
-        angle = 3;
-        mode = 3;
-        UFrame = Frame::make_UFrame(angle);
-        TX_Flow(UFrame);
-      } else {
-        Serial.println("Wrong Input");
+        String ACK = Frame::make_ackFrame(myseq);
+        TX_Flow(ACK);
+        
       }
+    }
 
-    }
-  }
-  while (mode == 3) { //send specific scan command
-    int receiveACK = RX_Flow(UFrame, true);
-    while (receiveACK == NULL) {
-      receiveACK = RX_Flow(UFrame, true);
-    }
-    String ctrl, seq;
-    String inp = Frame::decodeFrame(Frame::BINtoString(16, receiveACK), ctrl, seq);
-    if (ctrl.equals("01")) { //check act is correctly receive
-      mode = 4;
-      myseq = 0;
-    }
-  }
-  while (mode == 4) {
-    //waitforserial();//waiting for implementation
-    int receiveData = RX_Flow("", false);
-    while (receiveData == NULL) {
-      receiveData = RX_Flow("", false);
-    }
-    String seq, ctrl;
-    String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
-    if (seq.equals(String(myseq))) {
-      if (!decodeddata.equals("Error")) {
-        frame_arr[framecounter] = decodeddata;
-        framecounter += 1;
-        myseq = (myseq + 1) % 2;
-        //displayalldata();//w/ for implementation
-      }
-    }
-    String ACK = Frame::make_ackFrame(myseq);
-    TX_Flow(ACK);
-    if (framecounter == 20) {
-      mode = 2;
-      framecounter = 0;
-      for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
-        frame_arr[i] = "";
-      }
-    }
   }
 }
