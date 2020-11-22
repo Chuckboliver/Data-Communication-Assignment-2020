@@ -68,33 +68,37 @@ int myseq = 0;
 int mode = -1;
 int angle = -1;
 String frame_arr[30] ;
+String UFrame;
 int framecounter = 0;
+long timer;
 void setup() {
   Serial.begin(9600);
   String test = Frame::make_UFrame(0);
   Serial.print("Press Enter to Scan all data");
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-  while (mode == -1) {
+  while (mode == -1) {//initing mode
     if (Serial.available()) {
       while (Serial.available()) {
         uint8_t temp = Serial.read();
       }
+      mode = 0;
     }
   }
-  while (mode == 0) { //insert command INIT to start scan
+}
 
-    String data = Frame::make_UFrame(0); // send setframe
-    TX_Flow(data);
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  while (mode == 0) { //sendUframe to scan/rescan
+
+    UFrame = Frame::make_UFrame(0); // send setframe
+    TX_Flow(UFrame);
     //flushRX(); //w/ for implementation
     long timer = millis();
     while (mode == 0) {
       while (!Serial.available()) {//w/ for datain
         if (millis() - timer >= 3000) {
           Serial.println("Timeout...retransmiting");
-          TX_Flow(data);//retransmit
+          TX_Flow(UFrame);//retransmit
           //flushRX();//w/ for implementation
           timer = millis();
         }
@@ -139,13 +143,13 @@ void loop() {
         }
       }
     }
-    if (framecounter == 2) {
+    if (framecounter == 3) {
       mode = 2;
       framecounter = 0;
       //displayalldata();//w/ for implementation
     }
   }
-  while (mode == 2) { //choose next command
+  while (mode == 2) { //wait for next command
     if (Serial.available()) {
       String readin = Serial.readStringUntil('\n');
       if (readin.equals("0")) { //reset scanning
@@ -155,21 +159,77 @@ void loop() {
         Serial.println("scanning -45");
         angle = 1;
         mode = 3;
+        UFrame = Frame::make_UFrame(angle);
+        TX_Flow(UFrame);
+        timer = millis();
       } else if (readin.equals("2")) {//get -45 data
         Serial.println("scanning 0");
         angle = 2;
         mode = 3;
+        UFrame = Frame::make_UFrame(angle);
+        TX_Flow(UFrame);
+        timer = millis();
       } else if (readin.equals("3")) {//get -45 data
         Serial.println("scanning +45");
         angle = 3;
         mode = 3;
+        UFrame = Frame::make_UFrame(angle);
+        TX_Flow(UFrame);
+        timer = millis();
       } else {
         Serial.println("Wrong Input");
       }
 
     }
   }
-  while (mode == 3) {
+  while (mode == 3) { //send specific scan command
 
+    while (!Serial.available()) {
+      if (millis() - timer > 3000) {
+        Serial.println("Timeout...retransmiting");
+        TX_Flow(UFrame);
+        //flushRX();//w/ for implementation
+        timer = millis();
+      }
+    }
+    String receiverack;// = RX.getString();//w/ for implementation
+    String ctrl, seq;
+    String inp = Frame::decodeFrame(receiverack, &ctrl, &seq);
+    if (ctrl.equals("01")) { //check act is correctly receive
+      mode = 4;
+      myseq = 0;
+    }
+  }
+  while(mode == 4){
+    //waitforserial();//waiting for implementation
+    if (Serial.available()) {//available from read
+
+      String receivedata;// = RX.read(); //w/ for implementation
+      String seq, ctrl;
+      String decodeddata = Frame::decodeFrame(receivedata, &ctrl, &seq);
+      if (seq.equals(String(myseq))) {
+        if (!decodeddata.equals("Error")) {
+          frame_arr[framecounter] = decodeddata;
+          framecounter += 1;
+          myseq = (myseq + 1) % 2;
+          String ACK = Frame::make_ackFrame(myseq);
+          TX_Flow(ACK);
+          long timer = millis();
+          while (!Serial.available()) {
+            if (millis() - timer > 3000) {
+              Serial.println("Timeout...retransmiting");
+              TX_Flow(ACK);
+              //flushRX();//w/ for implementation
+              timer = millis();
+            }
+          }
+        }
+      }
+    }
+    if (framecounter == 20) {
+      mode = 2;
+      framecounter = 0;
+      //displayalldata();//w/ for implementation
+    }
   }
 }
