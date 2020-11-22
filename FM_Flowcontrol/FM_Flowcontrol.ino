@@ -1,5 +1,6 @@
 #include "Frame.h"
 ////////////////////////////////////FSK////////////////////////////////
+////TX------VAR///////////
 #define defaultFreq 1700
 #define f0 500
 #define f1 800
@@ -14,6 +15,24 @@ const int delay1 = (1000000 / f1 - 1000000 / defaultFreq) / 4;
 const int delay2 = (1000000 / f2 - 1000000 / defaultFreq) / 4;
 const int delay3 = (1000000 / f3 - 1000000 / defaultFreq) / 4;
 const int setSample = 4;
+////TX------VAR///////////
+////RX------VAR///////////
+#ifndef cbi
+#define cbi(sfr, bit)(_SFR_BYTE(sfr)&=~_BV(bit))
+#endif
+#ifndef sbi
+#define sbi(sfr, bit)(_SFR_BYTE(sfr)|=_BV(bit))
+#endif
+#define r_slope 200
+int previousVoltage = 0;
+int countCycle = 0;
+uint16_t BAUD_COUNT = 0;
+uint16_t DATA = 0;
+uint16_t BIT_CHECK = -1;
+bool CHECK_AMPLITUDE = false;
+bool CHECK_BAUD = false;
+uint32_t BAUD_BEGIN_TIME = 0;
+////RX------VAR///////////
 int byteString2Int(String arrays){
     int num = 0;
     for(size_t i = 0 ; i < arrays.length() ; ++i){
@@ -56,11 +75,44 @@ void TX_Flow(String Frame) {
     for (size_t nCycle = 0 ; nCycle < cyclePerBaud ; ++nCycle) {
       for (size_t nSample = 0 ; nSample < setSample ; ++nSample) {
         dac.setVoltage(S_DAC[nSample], false);
+        delayMicroseconds(usedDelay);
       }
     }
   }
   SEND_BIN_DATA >>= 2;
   dac.setVoltage(0, false);
+}
+
+void RX_Flow(){
+  int Voltage = analogRead(A3);//Read analog from analog pin
+  if(Voltage > r_slope and previousVoltage < r_slope and not CHECK_AMPLITUDE){ //Found amplitude -> Found Baud
+    CHECK_AMPLITUDE = true;
+    if(not CHECK_BAUD){
+      BAUD_BEGIN_TIME = micros();
+      BIT_CHECK++;
+    }
+  }
+  if(Voltage > r_slope and CHECK_AMPLITUDE){ // Count cycle
+    countCycle++;
+    CHECK_BAUD = true;
+    CHECK_AMPLITUDE = true;
+  }
+  if(Voltage < r_slope and CHECK_BAUD){
+    if(micros() - BAUD_BEGIN_TIME > 9900){
+      uint16_t twoBitData = (((countCycle - 5) / 3 ) & 3 ) << (BIT_CHECK * 2);
+      DATA |= twoBitData;
+      BAUD_COUNT++;
+      if(BAUD_COUNT == 8){
+        Serial.println("RECIEVE FRAME : " + (String)DATA);
+        DATA = 0;
+        BAUD_COUNT = 0;
+        BIT_CHECK = -1;
+      }
+      BAUD_CHECK = false;
+      countCycle = 0;
+    }
+  }
+  previousVoltage = Voltage;
 }
 ////////////////////////////////////FSK////////////////////////////////
 
@@ -68,7 +120,11 @@ int mode = 0;
 int allframe[30] ;
 void setup() {
   Serial.begin(9600);
+  sbi(ADCSRA, ADPS2); // this for increase analogRead speed
+  cbi(ADCSRA, ADPS1);
+  cbi(ADCSRA, ADPS0);
   String test = Frame::enFrame(0, 15, 1);
+  Serial.flush();
 }
 
 void loop() {
