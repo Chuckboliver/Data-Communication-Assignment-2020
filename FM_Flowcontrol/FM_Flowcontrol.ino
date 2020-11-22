@@ -69,17 +69,17 @@ int mode = 0;
 int allframe[30] ;
 void setup() {
   Serial.begin(9600);
-  String test = Frame::enFrame(0, 15, 1);
+  String test = Frame::make_dataFrame(0);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-  while (mode == 0) { //insert command INIT to start scan
+  /*while (mode == 0) { //insert command INIT to start scan
     if (Serial.available()) {
       String sIn = Serial.readStringUntil('\n');
       if (sIn.equals("INIT")) {
-        String data = Frame::enFrame(3, 0, 0);
+        String data = Frame::make_dataFrame(3);
         Serial.print(data);//will change to send by FSK later
         flushRX(); //w/ for implementation
         long timer = millis();
@@ -123,5 +123,5 @@ void loop() {
       String sIn = Serial.readStringUntil('\n');
       
     }
-  }
+  }*/
 }

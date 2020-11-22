@@ -16,7 +16,7 @@
 
 class FSK {
   public:
-
+    
     static Adafruit_MCP4725 dac;
     static const uint16_t S_DAC[4] = {1000, 2000, 1000, 0};
     static  const int delay0 = (1000000 / f0 - 1000000 / defaultFreq) / 4;
