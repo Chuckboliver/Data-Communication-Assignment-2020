@@ -64,12 +64,13 @@ void TX_Flow(String Frame) {
   dac.setVoltage(0, false);
 }
 ////////////////////////////////////FSK////////////////////////////////
-
+int seq=0;
 int mode = 0;
 int allframe[30] ;
 void setup() {
   Serial.begin(9600);
-  String test = Frame::make_dataFrame(0);
+  String test = Frame::make_UFrame(0);
+  
 }
 
 void loop() {

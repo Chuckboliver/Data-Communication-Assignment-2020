@@ -9,14 +9,14 @@ static String Frame::BINtoString(int digit, int num) { //return String of num fo
   }
   return strout;
 }
-static String Frame::make_dataFrame(int data) {
+static String Frame::make_dataFrame(int data,int seq) {
   String strout;
-  strout += "1" + String(Frame::seq) + "00" + BINtoString(11, data) + "1"; //will implement crc later
+  strout += "1" + String(seq) + "00" + BINtoString(11, data) + "1"; //will implement crc later
   return strout;
 }
-static String Frame::make_ackFrame() {
+static String Frame::make_ackFrame(int seq) {
   String strout;
-  strout += "1" + String(Frame::seq) + "01" + "00000000000" + "1";
+  strout += "1" + String(seq) + "01" + "00000000000" + "1";
   return strout;
 }
 static String Frame::make_UFrame(int code) { // 0 reset ->1 get -45->2 get 0->3 get 45
@@ -32,7 +32,7 @@ static String Frame::decodeFrame(String strin, String &ctrl, String &seq) {
   for(int i=4;i<=14;i++){
     encodeddata += strin[i];
   }
-  /*if(!decodeCRC(encodeddata)==-1){
+  /*if(!decodeCRC(encodeddata)==-1){//w/ for new crc implementation
     return decodeCRC(encodeddata);
   }else{
     return "Error";

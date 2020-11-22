@@ -12,10 +12,9 @@
 class Frame{
     public:
     
-        static const uint8_t seq = 0; //seq number
         
-        static String make_dataFrame(int);
-        static String make_ackFrame();
+        static String make_dataFrame(int,int);
+        static String make_ackFrame(int);
         static String make_UFrame(int);
         static String decodeFrame(String,String&,String&);
         static String BINtoString(int,int);
