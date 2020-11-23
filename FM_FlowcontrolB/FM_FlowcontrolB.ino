@@ -176,6 +176,7 @@ void loop() {
 
         Serial.println("UFrame Received : " + ReceiveU);
         mode = 0;
+        Serial.println("CHANGE MODE TO 0");
       }
     }
 

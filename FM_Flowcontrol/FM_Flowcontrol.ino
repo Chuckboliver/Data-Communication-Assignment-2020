@@ -153,7 +153,7 @@ void setup() {
   sbi(ADCSRA, ADPS2); // this for increase analogRead speed
   cbi(ADCSRA, ADPS1);
   cbi(ADCSRA, ADPS0);
-  Serial.print("Press Enter to Scan all data");
+  Serial.println("Press Enter to Scan all data");
   Serial.flush();
 }
 

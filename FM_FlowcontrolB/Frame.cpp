@@ -1,5 +1,4 @@
 #include "Frame.h"
-#include "CRC6.h"
 static uint32_t Frame::byteString2Int(String arrays) {
   uint32_t num = 0;
   for (size_t i = 0 ; i < arrays.length() ; ++i) {
