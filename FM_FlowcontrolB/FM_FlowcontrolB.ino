@@ -51,7 +51,7 @@ void TX_Flow(String Frame) {
   uint32_t SEND_BIN_DATA = byteString2Int(Frame);
   //Serial.println("test " + (String)byteString2Int("1111111111111111"));
   Serial.println("Frame : " + Frame);
-  Serial.println("SEND_DATA : " + (String)SEND_BIN_DATA);
+  Serial.println("-----------------------------------");
   for (int rounds = 15; rounds > 0; rounds -= 2)
   {
     //Serial.println("Round : " + (String)rounds);
@@ -124,6 +124,7 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
         if (BAUD_COUNT == 8) {
           //Serial.println("DATA : " + (String)DATA);
           Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, DATA));
+          Serial.println("-----------------------------------");
           Serial.flush();
           uint32_t outputData = DATA;
           DATA = 0;
@@ -180,6 +181,7 @@ void SEND(int maxFrame, int nextMode) {
 void loop() {
   // put your main code here, to run repeatedly:
   if ( mode == -1) {
+    Serial.println("-----------------------------------");
     uint32_t ReceiveU = RX_Flow("", false);
     while (ReceiveU == 0) {
       ReceiveU = RX_Flow("", false);
@@ -204,6 +206,7 @@ void loop() {
     SEND(3, 2);
   }
   if (mode == 2) {
+    Serial.println("-----------------------------------");
     uint32_t ReceiveU = RX_Flow("", false);
     while (ReceiveU == 0) {
       ReceiveU = RX_Flow("", false);
@@ -236,6 +239,7 @@ void loop() {
     for (int i = 0 ; i < 20 ; i++) {
       frame_arr[i] = i * 13;
     }
+    mode = 4;
   }
   if (mode == 4) {
     SEND(20, 2);
