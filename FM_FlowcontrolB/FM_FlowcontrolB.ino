@@ -203,12 +203,41 @@ void loop() {
   if (mode == 1) {
     SEND(3, 2);
   }
-  if(mode == 2){
-    for(int i = 0 ; i < 20 ; i++){
-      frame_arr[i] = i * 13;
+  if (mode == 2) {
+    uint32_t ReceiveU = RX_Flow("", false);
+    while (ReceiveU == 0) {
+      ReceiveU = RX_Flow("", false);
+    }
+    String seq, ctrl;
+    String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, ReceiveU), ctrl, seq);
+    String Uctrl = seq + ctrl;
+    if (Uctrl.equals("010")) {
+      uint32_t data = Frame::byteString2Int(decodeddata);
+      if (not data.equals("Error")) {
+        if (data == 0) {
+          mode = 0;
+        }
+        else if (data == 1) {
+          mode = 3;
+          angle = 1;//01
+        }
+        else if (data == 2) {
+          mode = 3;
+          angle = 2;//10
+        }
+        else if (data == 3) {
+          mode = 3;
+          angle = 3;//11
+        }
+      }
     }
   }
   if (mode == 3) {
+    for (int i = 0 ; i < 20 ; i++) {
+      frame_arr[i] = i * 13;
+    }
+  }
+  if (mode == 4) {
     SEND(20, 2);
   }
 }
