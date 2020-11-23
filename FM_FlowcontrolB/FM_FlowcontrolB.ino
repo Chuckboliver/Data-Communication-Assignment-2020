@@ -246,14 +246,14 @@ void loop() {
     if (Uctrl.equals("010")) {
       uint32_t data = Frame::byteString2Int(decodeddata);
       if (not decodeddata.equals("Error")) {
-        if (data == 0) {
+        if (data == 16) {
           mode = 0;
           Serial.println("00");
           Serial.flush();
         }
         else{
           mode = 3;
-          Serial.println(decodeddata);
+          Serial.println(Frame::BINtoString(4, data));
           Serial.flush();
         }
         /*
