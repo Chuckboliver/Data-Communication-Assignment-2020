@@ -97,7 +97,7 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
       Serial.println("Time out!!!");
       Serial.println("Resend Frame : " + resendFrame);
       TX_Flow(resendFrame);
-      return NULL;
+      return 0;
     }
 
     uint32_t Voltage = analogRead(A3);//Read analog from analog pin
@@ -124,6 +124,7 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
         if (BAUD_COUNT == 8) {
           //Serial.println("DATA : " + (String)DATA);
           Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, DATA));
+          Serial.flush();
           uint32_t outputData = DATA;
           DATA = 0;
           BAUD_COUNT = 0;
@@ -143,7 +144,7 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
 int myseq = 0;
 int mode = -1;
 int angle = -1;
-String frame_arr[30] ;
+uint32_t frame_arr[30] ;
 String UFrame;
 int framecounter = 0;
 long timer;
@@ -160,8 +161,7 @@ void loop() {
   // put your main code here, to run repeatedly:
   if ( mode == -1) {
     uint32_t ReceiveU = RX_Flow("", false);
-
-    while (ReceiveU == NULL) {
+    while (ReceiveU == 0) {
       //Serial.println("ReceiveU : "+(String)ReceiveU);
       ReceiveU = RX_Flow("", false);
     }
@@ -175,16 +175,43 @@ void loop() {
       if (decodeddata.equals("00000000")) {
 
         Serial.println("UFrame Received : " + ReceiveU);
-        mode = 0;
-        Serial.println("CHANGE MODE TO 0");
+        frame_arr[0] = 8;
+        frame_arr[1] = 9;
+        frame_arr[2] = 10;
+        framecounter = 0;
+        String UFrame = Frame::make_UFrame(0);
+        TX_Flow(UFrame);
+        uint16_t ACK = RX_Flow(UFrame, true);
+        while(ACK == 0){
+          ACK = RX_Flow(UFrame, true);
+        }
+        mode = 1;
+        Serial.println("CHANGE MODE TO 1");
       }
     }
 
   }
-  if (mode == 0) {
+  if (mode == 1) {
     //CAMERA
-    TX_Flow(Frame::make_dataFrame(0, myseq));
-    //mode = -1;
+    String dataFrame = Frame::make_dataFrame(frame_arr[framecounter], myseq);
+    TX_Flow(dataFrame);
+    int ReceiveACK = RX_Flow(dataFrame, true);
+    while(ReceiveACK == NULL){
+      ReceiveACK = RX_Flow(dataFrame, true);
+    }
+    Serial.println("Received ACK from A");
+    String ctrl, seq;
+    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, ReceiveACK), ctrl, seq);
+    if(ctrl.equals("01")){
+      if (seq.equals((String)myseq) and not decodedFrame.equals("Error")) {
+        myseq = (myseq + 1) % 2;
+        framecounter++;
+      }
+    }
+    if(framecounter == 3){
+      mode = 2;
+      framecounter = 0;
+    }
   }
 
 }

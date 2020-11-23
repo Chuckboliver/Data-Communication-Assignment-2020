@@ -62,9 +62,9 @@ static String Frame::decodeFrame(String strin, String& ctrl, String& seq) {
   for(int i = 12;i<=14;i++){
     remainder+=String(strin[i]);
   }
-  String decodeddata = String(getcrc(byteString2Int(encodeddata)));
+  String decodeddata = BINtoString(11, getcrc(byteString2Int(encodeddata)));
   if(decodeddata.equals(encodeddata+remainder)){
-    return decodeddata;
+    return encodeddata;
   }else{
     return "Error";
   }

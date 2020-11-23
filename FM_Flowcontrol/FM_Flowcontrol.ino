@@ -97,7 +97,7 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
       Serial.println("Time out!!!");
       Serial.println("Resend Frame : " + resendFrame);
       TX_Flow(resendFrame);
-      return NULL;
+      return 0;
     }
 
     uint32_t Voltage = analogRead(A3);//Read analog from analog pin
@@ -123,7 +123,9 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
         BAUD_COUNT++;
         if (BAUD_COUNT == 8) {
           //Serial.println("DATA : " + (String)DATA);
-          Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, DATA));
+          
+          Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, (uint16_t)DATA));
+          Serial.flush();
           uint32_t outputData = DATA;
           DATA = 0;
           BAUD_COUNT = 0;
@@ -166,44 +168,45 @@ void loop() {
         uint8_t temp = Serial.read();
       }
       mode = 0;
-      Serial.println("CHANGE TO MODE 0");
+      Serial.println("MODE0");
+      Serial.flush();
     }
   }
   if (mode == 0) { //sendUframe to scan/rescan
     UFrame = Frame::make_UFrame(0); // send setframe
     TX_Flow(UFrame);
-    Serial.println("TX_COMPLETE!");
     //flushRX(); //w/ for implementation
-    int receiveData = RX_Flow(UFrame, true);
-    while (receiveData == NULL) {
-      receiveData = RX_Flow(UFrame, true);
+    int receiveU = RX_Flow(UFrame, true);
+    while (receiveU == 0) {
+      receiveU = RX_Flow(UFrame, true);
     }
-    Serial.println("TX_COMPLETE2!");
     String ctrl, seq;
-    
-    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
-    if (ctrl.equals("00")) {
+    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveU), ctrl, seq);
+    String Uctrl = ctrl + seq;
+    if (Uctrl.equals("010")) {
+      /*
+      framecounter = 0;
+      for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
+        frame_arr[i] = "";
+      }*/
+      String ACK =  Frame::make_ackFrame(0);
+      TX_Flow(ACK);
       mode = 1;
-      Serial.println("CHANGE TO MODE 1");
+      Serial.println("MODE1");
+      Serial.flush();
       if (seq.equals((String)myseq) and not decodedFrame.equals("Error")) {
         frame_arr[framecounter] = decodedFrame;
         myseq = (myseq + 1) % 2;
       }
     }
-    String ACKFrame = Frame::make_ackFrame(myseq);
-    TX_Flow(ACKFrame);
-    framecounter = 0;
-    for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
-      frame_arr[i] = "";
-    }
-   
+    Serial.println("SendACK : " + ACKFrame);
+    Serial.flush();
   }
-
   if (mode == 1) { //receiving data from sender
     //waitforserial();//waiting for implementation
 
     int ReceiveData = RX_Flow("", false);
-    while (ReceiveData == NULL) {
+    while (ReceiveData == 0) {
       ReceiveData = RX_Flow("", false);
     }
     String seq, ctrl;
