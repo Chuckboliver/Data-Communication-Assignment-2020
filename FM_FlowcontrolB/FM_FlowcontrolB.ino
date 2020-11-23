@@ -1,4 +1,5 @@
 #include "Frame.h"
+
 ////////////////////////////////////FSK////////////////////////////////
 ////TX------VAR///////////
 #define defaultFreq 1700
@@ -196,11 +197,32 @@ void loop() {
     }
   }
   if (mode == 0) {
-    frame_arr[0] = 8;
-    frame_arr[1] = 9;
-    frame_arr[2] = 10;
+    /*
+      frame_arr[0] = 8;
+      frame_arr[1] = 9;
+      frame_arr[2] = 10;
+    */
     framecounter = 0;
-    mode = 1;
+    if (Serial.available()) {
+      String data = Serial.readStringUntil('\n');
+      Serial.println("DATA : " + data);
+      for (int rounds = 0 ; rounds < 3 ; rounds++) {
+        String ang = "";
+        String pic = "";
+        for (int angle = 0 ; angle < 2 ; angle++) {
+          ang += data[6 * rounds + angle];
+        }
+        for (int pic = 0 ; pic < 4 ; pic++) {
+          pic += data[6 * rounds + pic + 2];
+        }
+        if (ang.equals(Frame::BINtoString(2, rounds + 1))) {
+        frame_arr[framecounter++] = Frame::byteString2Int(pic);
+        }
+      }
+      mode = 1;
+      framecounter = 0;
+    }
+
   }
   if (mode == 1) {
     SEND(3, 2);
@@ -219,27 +241,47 @@ void loop() {
       if (not decodeddata.equals("Error")) {
         if (data == 0) {
           mode = 0;
+          Serial.write("00");
+          Serial.flush();
         }
         else if (data == 1) {
           mode = 3;
           angle = 1;//01
+          Serial.write("01");
+          Serial.flush();
         }
         else if (data == 2) {
           mode = 3;
           angle = 2;//10
+          Serial.write("10");
+          Serial.flush();
         }
         else if (data == 3) {
           mode = 3;
           angle = 3;//11
+          Serial.write("11");
+          Serial.flush();
         }
       }
     }
   }
   if (mode == 3) {
+    /*
     for (int i = 0 ; i < 20 ; i++) {
       frame_arr[i] = i * 13;
+    }*/
+    if(Serial.available()){
+      String data = Serial.readStringUntil('\n');
+      for(int quadrant = 0 ;quadrant < 4 ; quadrant++){
+        
+        for(int alpha = 0 ; alpha < 4 ; alpha++){
+          frame_arr[framecounter++] = data[5 * quadrant + alpha];
+        }
+        frame_arr[framecounter++] = data[5 * (quadrant + 1) - 1];
+      }
+      mode = 4;
+      framecounter = 0;
     }
-    mode = 4;
   }
   if (mode == 4) {
     SEND(20, 2);
