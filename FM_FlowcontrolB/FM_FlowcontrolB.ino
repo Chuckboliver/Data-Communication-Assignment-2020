@@ -213,7 +213,7 @@ void loop() {
     String Uctrl = seq + ctrl;
     if (Uctrl.equals("010")) {
       uint32_t data = Frame::byteString2Int(decodeddata);
-      if (not data.equals("Error")) {
+      if (not decodeddata.equals("Error")) {
         if (data == 0) {
           mode = 0;
         }

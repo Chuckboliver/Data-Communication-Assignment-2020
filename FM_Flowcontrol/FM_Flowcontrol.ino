@@ -158,6 +158,25 @@ void setup() {
   Serial.println("Press Enter to Scan all data");
   Serial.flush();
 }
+void display3(){
+  Serial.print("DATA : [LEFT]  [CENTER] [RIGHT]\n           ");
+    for(framecounter = 0;framecounter<3;framecounter++){
+    Serial.print("["+Frame::BINtoString(4,byteString2Int(frame_arr[framecounter]))+"]    ");
+  }
+  Serial.println();
+  framecounter = 0;
+}
+void display20(){
+  for (framecounter = 0;framecounter<20;framecounter++){
+    if((framecounter+1)%5!=0){
+      Serial.println("Frame "+String(framecounter+1)+"(x,y) : "+(String)byteString2Int(frame_arr[framecounter]));
+    }else{
+      Serial.println("Frame "+String(framecounter+1)+"->"+"Mean "+String((framecounter+1)/5)+" : "+(String)byteString2Int(frame_arr[framecounter]));
+    }
+    delay(500);
+  }
+  framecounter = 0 ;
+}
 void RECEIVE(int maxFrame, int nextMode) {
   uint32_t dataFrame = RX_Flow("", false);
   while (dataFrame == 0) {
@@ -196,10 +215,11 @@ void loop() {
     String UFrame = Frame::make_UFrame(0);
     TX_Flow(UFrame);
     int receiveData = RX_Flow(UFrame, true);
-    while (receiveACK == 0) {
+    while (receiveData == 0) {
       receiveData = RX_Flow(UFrame, true);
     }
-    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), "", "");
+    String ctrl,seq;
+    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
     if(not decodedFrame.equals("Error")){
       mode = 1;
     }
@@ -240,16 +260,17 @@ void loop() {
     String UFrame = Frame::make_UFrame(angle);
     TX_Flow(UFrame);
     int receiveData = RX_Flow(UFrame, true);
-    while (receiveACK == 0) {
+    while (receiveData == 0) {
       receiveData = RX_Flow(UFrame, true);
     }
-    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), "", "");
+    String ctrl,seq;
+    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
     if(not decodedFrame.equals("Error")){
       mode = 4;
     }
   }
   if (mode == 4) {
-   RECIEVE(20, 2);
+   RECEIVE(20, 2);
    //Display data
    Serial.println("Pls enter something. :\n 1). Scan -45\n2). Scan 0\n3).Scan 45\n0).ReScan");
   }
