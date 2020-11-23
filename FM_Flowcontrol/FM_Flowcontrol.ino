@@ -149,6 +149,7 @@ int myseq = 0;
 int mode = -1;
 int angle = -1;
 String frame_arr[30] ;
+String PicBinary[3];
 String UFrame;
 int framecounter = 0;
 long timer;
@@ -164,7 +165,7 @@ void setup() {
 void display3(){
   Serial.print("DATA : [LEFT]  [CENTER] [RIGHT]\n       ");
     for(framecounter = 0;framecounter<3;framecounter++){
-    Serial.print("["+Frame::BINtoString(4,(int)byteString2Int(frame_arr[framecounter]))+"]   ");
+    Serial.print("["+Frame::BINtoString(4,(int)byteString2Int(PicBinary[framecounter]))+"]   ");
   }
   Serial.println();
   framecounter = 0;
@@ -180,6 +181,7 @@ void display20(){
   }
   framecounter = 0 ;
 }
+int index = 0;
 void RECEIVE(int maxFrame, int nextMode) {
   uint32_t dataFrame = RX_Flow("", false);
   while (dataFrame == 0) {
@@ -189,8 +191,14 @@ void RECEIVE(int maxFrame, int nextMode) {
   String ctrl, seq;
   String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, dataFrame), ctrl, seq);
   if (ctrl.equals("00") and seq.equals((String)myseq) and not decodeddata.equals("Error")) {
+
     Serial.println("Decoded data : " + decodeddata);
-    frame_arr[framecounter] = decodeddata;
+    if( maxFrame != 3){
+      frame_arr[framecounter] = decodeddata;
+    }
+    else{
+      PicBinary[framecounter] = decodeddata;
+    }
     myseq = (myseq + 1) % 2;
     framecounter++;
   }
@@ -271,7 +279,8 @@ void loop() {
     }
   }
   if (mode == 3) { //send specific scan command
-    String UFrame = Frame::make_UFrame(angle);
+    //String UFrame = Frame::make_UFrame(angle);
+    String UFrame = Frame::make_UFrame(Frame::byteString2Int(PicBinary[angle - 1]));
     Serial.println("-----------------------------------");
     TX_Flow(UFrame);
     Serial.println("-----------------------------------");

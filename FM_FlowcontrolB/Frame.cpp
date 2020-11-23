@@ -28,7 +28,7 @@ static uint16_t Frame::getcrc(int data){
     //cal is remainder
     return data ^ cal;
 }
-static String Frame::BINtoString(int digit, int num) { //return String of num for selected digit
+static String Frame::BINtoString(int digit, uint16_t num) { //return String of num for selected digit
   String strout;
   strout = String(num, BIN);
   while (strout.length() < digit) {

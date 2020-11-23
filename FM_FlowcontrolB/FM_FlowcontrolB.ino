@@ -156,7 +156,8 @@ void setup() {
   sbi(ADCSRA, ADPS2); // this for increase analogRead speed
   cbi(ADCSRA, ADPS1);
   cbi(ADCSRA, ADPS0);
-
+  //Serial.println("Test : "+ Frame::BINtoString(8, (uint16_t)"ÿ"));
+  Serial.println('ÿ',DEC);
 }
 void SEND(int maxFrame, int nextMode) {
   String dataFrame = Frame::make_dataFrame(frame_arr[framecounter], myseq);
@@ -193,10 +194,11 @@ void loop() {
     if (Uctrl.equals("010") and decodeddata.equals("00000000")) {
       Serial.println("UFrame Received : ");
       mode = 0;
-      Serial.println("CHANGE MODE TO 1");
+      Serial.println("CHANGE MODE TO 0");
+      Serial.print("00");
     }
   }
-  if (mode == 0) {
+  if (mode == 0) {///cam send 3
     /*
       frame_arr[0] = 8;
       frame_arr[1] = 9;
@@ -206,17 +208,21 @@ void loop() {
     if (Serial.available()) {
       String data = Serial.readStringUntil('\n');
       Serial.println("DATA : " + data);
+      //011001101010110000
+      //ÿÿÿÿÿ          ÿÿÿÿÿ
       for (int rounds = 0 ; rounds < 3 ; rounds++) {
         String ang = "";
         String pic = "";
         for (int angle = 0 ; angle < 2 ; angle++) {
           ang += data[6 * rounds + angle];
         }
-        for (int pic = 0 ; pic < 4 ; pic++) {
-          pic += data[6 * rounds + pic + 2];
+        for (int i = 0 ; i < 4 ; i++) {
+          pic += data[6 * rounds + i + 2];
         }
         if (ang.equals(Frame::BINtoString(2, rounds + 1))) {
+        Serial.println("ANG correct : " + pic);
         frame_arr[framecounter++] = Frame::byteString2Int(pic);
+        Serial.println(frame_arr[framecounter - 1]);
         }
       }
       mode = 1;
@@ -227,6 +233,7 @@ void loop() {
   if (mode == 1) {
     SEND(3, 2);
   }
+  
   if (mode == 2) {
     Serial.println("-----------------------------------");
     uint32_t ReceiveU = RX_Flow("", false);
@@ -241,27 +248,36 @@ void loop() {
       if (not decodeddata.equals("Error")) {
         if (data == 0) {
           mode = 0;
-          Serial.write("00");
+          Serial.println("00");
           Serial.flush();
         }
+        else{
+          mode = 3;
+          Serial.println(decodeddata);
+          Serial.flush();
+        }
+        /*
         else if (data == 1) {
           mode = 3;
           angle = 1;//01
-          Serial.write("01");
+          Serial.println(angle);
+          Serial.println(Frame::BINtoString(4, frame_arr[0]));
           Serial.flush();
         }
         else if (data == 2) {
           mode = 3;
           angle = 2;//10
-          Serial.write("10");
+          Serial.println(angle);
+          Serial.println(Frame::BINtoString(4, frame_arr[1]));
           Serial.flush();
         }
         else if (data == 3) {
           mode = 3;
           angle = 3;//11
-          Serial.write("11");
+          Serial.println(angle);
+          Serial.println(Frame::BINtoString(4, frame_arr[2]));
           Serial.flush();
-        }
+        }*/
       }
     }
   }
@@ -272,12 +288,17 @@ void loop() {
     }*/
     if(Serial.available()){
       String data = Serial.readStringUntil('\n');
+      uint32_t tmp;
       for(int quadrant = 0 ;quadrant < 4 ; quadrant++){
         
         for(int alpha = 0 ; alpha < 4 ; alpha++){
-          frame_arr[framecounter++] = data[5 * quadrant + alpha];
+          if(data[5 * quadrant + alpha] == 49)tmp = 255;
+          else if(data[5 * quadrant + alpha] == 48)tmp = 0;
+          frame_arr[framecounter++] = tmp;
         }
-        frame_arr[framecounter++] = data[5 * (quadrant + 1) - 1];
+        if(data[5 * (quadrant+1) - 1 ] == 49)tmp = 255;
+        else if(data[5 * (quadrant+1) - 1] == 48)tmp = 0;
+        frame_arr[framecounter++] = tmp;
       }
       mode = 4;
       framecounter = 0;
