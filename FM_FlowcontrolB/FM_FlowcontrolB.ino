@@ -156,62 +156,59 @@ void setup() {
   cbi(ADCSRA, ADPS0);
 
 }
+void SEND(int maxFrame, int nextMode) {
+  String dataFrame = Frame::make_dataFrame(frame_arr[framecounter], myseq);
+  TX_Flow(dataFrame);
+  uint32_t ACK = RX_Flow(dataFrame, true);
+  while (ACK == 0) {
+    ACK = RX_Flow(dataFrame, true);
+  }
+  String seq, ctrl;
+  String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, ACK), ctrl, seq);
 
+  if (ctrl.equals("01") and seq.equals((String)((myseq + 1) % 2))) {
+    Serial.println("Retrieve ACK " );
+    myseq = (myseq + 1) % 2;
+    framecounter++;
+  }
+  if (framecounter == maxFrame) {
+    mode = nextMode;
+    framecounter = 0;
+    Serial.println("MODE : " + (String)nextMode);
+  }
+}
 void loop() {
   // put your main code here, to run repeatedly:
   if ( mode == -1) {
     uint32_t ReceiveU = RX_Flow("", false);
     while (ReceiveU == 0) {
-      //Serial.println("ReceiveU : "+(String)ReceiveU);
       ReceiveU = RX_Flow("", false);
     }
-    Serial.println("ReceiveU : " + (String)ReceiveU);
     String seq, ctrl;
     String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, ReceiveU), ctrl, seq);
     String Uctrl = seq + ctrl;
-    Serial.println("Uctrl : " + Uctrl);
-    if (Uctrl == "010") {
-      Serial.println("DecodedData : " + decodeddata);
-      if (decodeddata.equals("00000000")) {
-
-        Serial.println("UFrame Received : " + ReceiveU);
-        frame_arr[0] = 8;
-        frame_arr[1] = 9;
-        frame_arr[2] = 10;
-        framecounter = 0;
-        String UFrame = Frame::make_UFrame(0);
-        TX_Flow(UFrame);
-        uint16_t ACK = RX_Flow(UFrame, true);
-        while(ACK == 0){
-          ACK = RX_Flow(UFrame, true);
-        }
-        mode = 1;
-        Serial.println("CHANGE MODE TO 1");
-      }
+    if (Uctrl.equals("010") and decodeddata.equals("00000000")) {
+      Serial.println("UFrame Received : ");
+      mode = 0;
+      Serial.println("CHANGE MODE TO 1");
     }
-
+  }
+  if (mode == 0) {
+    frame_arr[0] = 8;
+    frame_arr[1] = 9;
+    frame_arr[2] = 10;
+    framecounter = 0;
+    mode = 1;
   }
   if (mode == 1) {
-    //CAMERA
-    String dataFrame = Frame::make_dataFrame(frame_arr[framecounter], myseq);
-    TX_Flow(dataFrame);
-    int ReceiveACK = RX_Flow(dataFrame, true);
-    while(ReceiveACK == NULL){
-      ReceiveACK = RX_Flow(dataFrame, true);
-    }
-    Serial.println("Received ACK from A");
-    String ctrl, seq;
-    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, ReceiveACK), ctrl, seq);
-    if(ctrl.equals("01")){
-      if (seq.equals((String)myseq) and not decodedFrame.equals("Error")) {
-        myseq = (myseq + 1) % 2;
-        framecounter++;
-      }
-    }
-    if(framecounter == 3){
-      mode = 2;
-      framecounter = 0;
+    SEND(3, 2);
+  }
+  if(mode == 2){
+    for(int i = 0 ; i < 20 ; i++){
+      frame_arr[i] = i * 13;
     }
   }
-
+  if (mode == 3) {
+    SEND(20, 2);
+  }
 }

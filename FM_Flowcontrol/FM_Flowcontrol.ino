@@ -123,7 +123,7 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
         BAUD_COUNT++;
         if (BAUD_COUNT == 8) {
           //Serial.println("DATA : " + (String)DATA);
-          
+
           Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, (uint16_t)DATA));
           Serial.flush();
           uint32_t outputData = DATA;
@@ -158,7 +158,27 @@ void setup() {
   Serial.println("Press Enter to Scan all data");
   Serial.flush();
 }
-
+void RECEIVE(int maxFrame, int nextMode) {
+  uint32_t dataFrame = RX_Flow("", false);
+  while (dataFrame == 0) {
+    dataFrame = RX_Flow("", false);
+  }
+  Serial.println("Received dataFrame : " + Frame::BINtoString(16, dataFrame));
+  String ctrl, seq;
+  String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, dataFrame), ctrl, seq);
+  if (ctrl.equals("00") and seq.equals((String)myseq) and not decodeddata.equals("Error")) {
+    Serial.println("Decoded data : " + decodeddata);
+    myseq = (myseq + 1) % 2;
+    framecounter++;
+  }
+  String ACK = Frame::make_ackFrame(myseq);
+  TX_Flow(ACK);
+  if (framecounter == maxFrame) {
+    mode = nextMode;
+    framecounter = 0;
+    Serial.println("MODE : "+(String)nextMode);
+  }
+}
 void loop() {
   // put your main code here, to run repeatedly:
   if (mode == -1) {
@@ -173,59 +193,20 @@ void loop() {
     }
   }
   if (mode == 0) { //sendUframe to scan/rescan
-    UFrame = Frame::make_UFrame(0); // send setframe
+    String UFrame = Frame::make_UFrame(0);
     TX_Flow(UFrame);
-    //flushRX(); //w/ for implementation
-    int receiveU = RX_Flow(UFrame, true);
-    while (receiveU == 0) {
-      receiveU = RX_Flow(UFrame, true);
+    int receiveData = RX_Flow(UFrame, true);
+    while (receiveACK == 0) {
+      receiveData = RX_Flow(UFrame, true);
     }
-    String ctrl, seq;
-    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveU), ctrl, seq);
-    String Uctrl = ctrl + seq;
-    if (Uctrl.equals("010")) {
-      /*
-      framecounter = 0;
-      for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
-        frame_arr[i] = "";
-      }*/
-      String ACK =  Frame::make_ackFrame(0);
-      TX_Flow(ACK);
+    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), "", "");
+    if(not decodedFrame.equals("Error")){
       mode = 1;
-      Serial.println("MODE1");
-      Serial.flush();
-      if (seq.equals((String)myseq) and not decodedFrame.equals("Error")) {
-        frame_arr[framecounter] = decodedFrame;
-        myseq = (myseq + 1) % 2;
-      }
     }
-    Serial.println("SendACK : " + ACKFrame);
-    Serial.flush();
   }
   if (mode == 1) { //receiving data from sender
-    //waitforserial();//waiting for implementation
-
-    int ReceiveData = RX_Flow("", false);
-    while (ReceiveData == 0) {
-      ReceiveData = RX_Flow("", false);
-    }
-    String seq, ctrl;
-    String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, ReceiveData), ctrl, seq);
-    if (seq.equals(String(myseq))) {
-      if (!decodeddata.equals("Error")) {
-        frame_arr[framecounter] = decodeddata;
-        framecounter += 1;
-        myseq = (myseq + 1) % 2;
-      }
-    }
-    String ACK = Frame::make_ackFrame(myseq);
-    TX_Flow(ACK);
-    if (framecounter == 3) {
-      mode = 2;
-      framecounter = 0;
-      Serial.println("CHANGE TO MODE 2");
-      //displayalldata();//w/ for implementation
-    }
+    RECEIVE(3, 2);
+    Serial.println("Pls enter something. :\n 1). Scan -45\n2). Scan 0\n3).Scan 45\n0).ReScan");
   }
   if (mode == 2) { //wait for next command
     if (Serial.available()) {
@@ -233,24 +214,22 @@ void loop() {
       if (readin.equals("0")) { //reset scanning
         Serial.println("rescanning");
         mode = 0;
+        framecounter = 0;
       } else if (readin.equals("1")) {//get -45 data
         Serial.println("scanning -45");
         angle = 1;
         mode = 3;
-        UFrame = Frame::make_UFrame(angle);
-        TX_Flow(UFrame);
+        framecounter = 0;
       } else if (readin.equals("2")) {//get -45 data
         Serial.println("scanning 0");
         angle = 2;
         mode = 3;
-        UFrame = Frame::make_UFrame(angle);
-        TX_Flow(UFrame);
+        framecounter = 0;
       } else if (readin.equals("3")) {//get -45 data
         Serial.println("scanning +45");
         angle = 3;
         mode = 3;
-        UFrame = Frame::make_UFrame(angle);
-        TX_Flow(UFrame);
+        framecounter = 0;
       } else {
         Serial.println("Wrong Input");
       }
@@ -258,41 +237,20 @@ void loop() {
     }
   }
   if (mode == 3) { //send specific scan command
-    int receiveACK = RX_Flow(UFrame, true);
-    while (receiveACK == NULL) {
-      receiveACK = RX_Flow(UFrame, true);
+    String UFrame = Frame::make_UFrame(angle);
+    TX_Flow(UFrame);
+    int receiveData = RX_Flow(UFrame, true);
+    while (receiveACK == 0) {
+      receiveData = RX_Flow(UFrame, true);
     }
-    String ctrl, seq;
-    String inp = Frame::decodeFrame(Frame::BINtoString(16, receiveACK), ctrl, seq);
-    if (ctrl.equals("01")) { //check act is correctly receive
+    String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), "", "");
+    if(not decodedFrame.equals("Error")){
       mode = 4;
-      myseq = 0;
     }
   }
   if (mode == 4) {
-    //waitforserial();//waiting for implementation
-    int receiveData = RX_Flow("", false);
-    while (receiveData == NULL) {
-      receiveData = RX_Flow("", false);
-    }
-    String seq, ctrl;
-    String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
-    if (seq.equals(String(myseq))) {
-      if (!decodeddata.equals("Error")) {
-        frame_arr[framecounter] = decodeddata;
-        framecounter += 1;
-        myseq = (myseq + 1) % 2;
-        //displayalldata();//w/ for implementation
-      }
-    }
-    String ACK = Frame::make_ackFrame(myseq);
-    TX_Flow(ACK);
-    if (framecounter == 20) {
-      mode = 2;
-      framecounter = 0;
-      for (int i = 0; i < sizeof(frame_arr); i++) { //reset frame array
-        frame_arr[i] = "";
-      }
-    }
+   RECIEVE(20, 2);
+   //Display data
+   Serial.println("Pls enter something. :\n 1). Scan -45\n2). Scan 0\n3).Scan 45\n0).ReScan");
   }
 }
