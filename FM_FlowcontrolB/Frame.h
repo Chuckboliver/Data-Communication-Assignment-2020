@@ -18,5 +18,7 @@ class Frame{
         static String make_UFrame(int);
         static String decodeFrame(String,String&,String&);
         static String BINtoString(int,int);
+        static uint16_t getcrc(int);
+        static uint32_t byteString2Int(String);
 };
 #endif

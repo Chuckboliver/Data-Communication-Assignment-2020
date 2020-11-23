@@ -1,6 +1,34 @@
 #include "Frame.h"
 #include "CRC6.h"
-
+static uint32_t Frame::byteString2Int(String arrays) {
+  uint32_t num = 0;
+  for (size_t i = 0 ; i < arrays.length() ; ++i) {
+    //Serial.print((int)arrays[i]);
+    num  = (num + (uint32_t)arrays[i] - 48) * 2;
+  }
+  return num / 2;
+}
+static uint16_t Frame::getcrc(int data){
+    data = data << 3;
+    int cal = data;
+    int GP = 11;
+    String toptip = "";
+    String test = "";
+    for(int i = 0 ; i < 8 ; i++){
+    GP = GP << 7 - i;
+        toptip = BINtoString(11-i,cal);
+        test = toptip[0];
+    if(test.equals("1")){
+      cal ^= GP;
+    }
+    else{
+    cal ^= 0;
+    }
+        GP = GP >> 7-i;
+    }
+    //cal is remainder
+    return data ^ cal;
+}
 static String Frame::BINtoString(int digit, int num) { //return String of num for selected digit
   String strout;
   strout = String(num, BIN);
@@ -26,16 +54,20 @@ static String Frame::make_UFrame(int code) { // 0 reset ->1 get -45->2 get 0->3 
 }
 static String Frame::decodeFrame(String strin, String& ctrl, String& seq) {
   //for U Frame use ctrl+seq to check "010" to check command
-  String encodeddata;
+  String encodeddata,remainder;
   seq = seq+ String(strin[1]);
   ctrl = ctrl + String(strin[2])+String(strin[3]);
   for(int i=4;i<=11;i++){
     encodeddata += String(strin[i]);
   }
-  /*if(!decodeCRC(encodeddata)==-1){//w/ for new crc implementation
-    return decodeCRC(encodeddata);
+  for(int i = 12;i<=14;i++){
+    remainder+=String(strin[i]);
+  }
+  String decodeddata = String(getcrc(byteString2Int(encodeddata)));
+  if(decodeddata.equals(encodeddata+remainder)){
+    return decodeddata;
   }else{
     return "Error";
-  }*/
-  return encodeddata;
+  }
+  return "";
 }
