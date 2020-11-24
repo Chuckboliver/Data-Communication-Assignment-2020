@@ -240,6 +240,8 @@ void setup() {
   cbi(ADCSRA, ADPS0);
   Serial.println("MODE : " + NAME[mode + 1] + " Press Enter :");
   Serial.flush();
+  Wire.begin();
+  radio.setFrequency(93.0);
 }
 void display3(){
   Serial.print("DATA : [LEFT]  [CENTER] [RIGHT]\n       ");
