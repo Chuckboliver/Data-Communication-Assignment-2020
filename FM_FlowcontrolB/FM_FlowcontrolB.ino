@@ -18,6 +18,7 @@ const int delay1 = (1000000 / f1 - 1000000 / defaultFreq) / 4;
 const int delay2 = (1000000 / f2 - 1000000 / defaultFreq) / 4;
 const int delay3 = (1000000 / f3 - 1000000 / defaultFreq) / 4;
 const int setSample = 4;
+uint16_t delayFMConfig = 100;
 ////TX------VAR///////////
 ////RX------VAR///////////
 #ifndef cbi
@@ -103,6 +104,7 @@ void TX_Flow(String Frame) {
     SEND_BIN_DATA >>= 2;
   }
   dac.setVoltage(0, false);
+  delay(delayFMConfig);
 }
 
 uint16_t RX_Flow(String resendFrame, bool RESEND) {
