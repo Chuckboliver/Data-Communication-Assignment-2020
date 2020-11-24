@@ -59,7 +59,7 @@ void loop( ) {
         inData[i]>>=2;
       }
       Serial.println();
-      delay(100);
+      //delay(100);
     }
    dac.setVoltage(0, false);
    

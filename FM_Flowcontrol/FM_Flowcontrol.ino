@@ -18,7 +18,7 @@ const int delay1 = (1000000 / f1 - 1000000 / defaultFreq) / 4;
 const int delay2 = (1000000 / f2 - 1000000 / defaultFreq) / 4;
 const int delay3 = (1000000 / f3 - 1000000 / defaultFreq) / 4;
 const int setSample = 4;
-uint16_t delayFMConfig = 100;
+uint16_t delayFMConfig = 200;
 ////TX------VAR///////////
 ////RX------VAR///////////
 #ifndef cbi
@@ -47,7 +47,7 @@ bool checkCyc = false;
 int baseA;
 int aUp;
 int aDown;
-uint32_t timePerBaud = 38900;
+uint32_t timePerBaud = 39000;
 ////RX------VAR///////////
 uint32_t byteString2Int(String arrays) {
   uint32_t num = 0;
@@ -103,14 +103,15 @@ void TX_Flow(String Frame) {
     }
     SEND_BIN_DATA >>= 2;
   }
+  //delay(delayFMConfig);
   dac.setVoltage(0, false);
-  delay(delayFMConfig);
+  
 }
 
 uint16_t RX_Flow(String resendFrame, bool RESEND) {
   unsigned long currentTime = millis();
   while (bitCount < 8) {
-    if (not Timer(currentTime, 3000) and RESEND) { // Timer : if time out resend last frame.
+    if (not Timer(currentTime, 2000) and RESEND) { // Timer : if time out resend last frame.
       Serial.println("Time out!!!");
       Serial.print("Re");
       TX_Flow(resendFrame);
@@ -199,7 +200,7 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
         checkBaud = false;
       }
     }
-    if(micros()-baudTime>45000){
+    if(micros()-baudTime>60000){
      count = 0;
      bitCount = 0;
      data = 0;
@@ -243,12 +244,13 @@ void setup() {
   Serial.println("MODE : " + NAME[mode + 1] + " Press Enter :");
   Serial.flush();
   Wire.begin();
-  radio.setFrequency(93.0);
+  radio.setFrequency(87.5);
   baseA = analogRead(A3);
    for(int i=0;i<9;i++){
     baseA+=analogRead(A3);
    }
    baseA=baseA/10;
+   //Serial.print(baseA);
    aUp = baseA+120;
    aDown = baseA-120;
 }
