@@ -43,9 +43,9 @@ uint32_t baudTime = 0;
 bool checkBaud = false;
 bool checkPeak = false;
 bool checkCyc = false;
-int baseA = 850;
-int aUp = baseA+140;
-int aDown = baseA-140;
+int baseA ;
+int aUp ;
+int aDown ;
 uint32_t timePerBaud = 38900;
 ////RX------VAR///////////
 uint32_t byteString2Int(String arrays) {
@@ -238,7 +238,14 @@ void setup() {
   //Serial.println("Test : "+ Frame::BINtoString(8, (uint16_t)"ÿ"));
   Serial.flush();
   Wire.begin();
-  radio.setFrequency(103.0);
+  radio.setFrequency(102.2);
+   baseA = analogRead(A3);
+   for(int i=0;i<9;i++){
+    baseA+=analogRead(A3);
+   }
+   baseA=baseA/10;
+   aUp = baseA+120;
+   aDown = baseA-120;
 }
 void SEND(int maxFrame, int nextMode) {
   String dataFrame = Frame::make_dataFrame(frame_arr[framecounter], myseq);
