@@ -1,15 +1,18 @@
 #include "Frame.h"
+#include <Adafruit_ADS1015.h>
+#include <TEA5767Radio.h>
+TEA5767Radio radio = TEA5767Radio();
 ////////////////////////////////////FSK////////////////////////////////
 ////TX------VAR///////////
 #define defaultFreq 1700
-#define f0 500
+#define f0 400
 #define f1 800
-#define f2 1100
-#define f3 1400
+#define f2 1200
+#define f3 1600
 #include<Wire.h>
 #include <Adafruit_MCP4725.h>
 Adafruit_MCP4725 dac;
-const uint16_t S_DAC[4] = {1000, 2000, 1000, 0};
+const uint16_t S_DAC[4] = {2000, 4000, 2000, 0};
 const int delay0 = (1000000 / f0 - 1000000 / defaultFreq) / 4;
 const int delay1 = (1000000 / f1 - 1000000 / defaultFreq) / 4;
 const int delay2 = (1000000 / f2 - 1000000 / defaultFreq) / 4;
@@ -24,14 +27,26 @@ const int setSample = 4;
 #define sbi(sfr, bit)(_SFR_BYTE(sfr)|=_BV(bit))
 #endif
 #define r_slope 200
-int previousVoltage = 0;
-int countCycle = 0;
-uint16_t BAUD_COUNT = 0;
-uint32_t DATA = 0;
-uint16_t BIT_CHECK = -1;
-bool CHECK_AMPLITUDE = false;
-bool CHECK_BAUD = false;
-uint32_t BAUD_BEGIN_TIME = 0;
+//int previousVoltage = 0;
+//int countCycle = 0;
+//uint16_t BAUD_COUNT = 0;
+//uint32_t DATA = 0;
+//uint16_t BIT_CHECK = -1;
+//bool CHECK_AMPLITUDE = false;
+//bool CHECK_BAUD = false;
+//uint32_t BAUD_BEGIN_TIME = 0;
+int prev = 0;
+int count = 0;
+uint16_t bitCount = 0;
+uint32_t data = 0;
+uint32_t baudTime = 0;
+bool checkBaud = false;
+bool checkPeak = false;
+bool checkCyc = false;
+int baseA = 550;
+int aUp = baseA+140;
+int aDown = baseA-140;
+uint32_t timePerBaud = 38900;
 ////RX------VAR///////////
 uint32_t byteString2Int(String arrays) {
   uint32_t num = 0;
@@ -60,22 +75,22 @@ void TX_Flow(String Frame) {
     uint32_t usedDelay, cyclePerBaud;
     if (twoBitData == 0)
     {
-      cyclePerBaud = 5;
+      cyclePerBaud = 16;
       usedDelay = delay0;
     }
     else if (twoBitData == 1)
     {
-      cyclePerBaud = 8;
+      cyclePerBaud = 32;
       usedDelay = delay1;
     }
     else if (twoBitData == 2)
     {
-      cyclePerBaud = 11;
+      cyclePerBaud = 48;
       usedDelay = delay2;
     }
     else
     {
-      cyclePerBaud = 14;
+      cyclePerBaud = 64;
       usedDelay = delay3;
     }
     for (size_t nCycle = 0 ; nCycle < cyclePerBaud ; ++nCycle) {
@@ -92,7 +107,7 @@ void TX_Flow(String Frame) {
 
 uint16_t RX_Flow(String resendFrame, bool RESEND) {
   unsigned long currentTime = millis();
-  while (BAUD_COUNT < 8) {
+  while (bitCount < 8) {
     if (not Timer(currentTime, 3000) and RESEND) { // Timer : if time out resend last frame.
       Serial.println("Time out!!!");
       Serial.print("Re");
@@ -100,47 +115,111 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
       return 0;
     }
 
-    uint32_t Voltage = analogRead(A3);//Read analog from analog pin
-    if (Voltage > r_slope and previousVoltage < r_slope and not CHECK_AMPLITUDE) { //Found amplitude -> Found Baud
-      CHECK_AMPLITUDE = true;
-      if (not CHECK_BAUD) {
-        BAUD_BEGIN_TIME = micros();
-        BIT_CHECK++;
+    uint32_t tmp = analogRead(A3);//Read analog from analog pin
+    //    if (Voltage > r_slope and previousVoltage < r_slope and not CHECK_AMPLITUDE) { //Found amplitude -> Found Baud
+    //      CHECK_AMPLITUDE = true;
+    //      if (not CHECK_BAUD) {
+    //        BAUD_BEGIN_TIME = micros();
+    //        BIT_CHECK++;
+    //      }
+    //    }
+  if(tmp<aDown and checkPeak == false){
+      checkPeak = true;
+      if(checkBaud == false){
+        checkBaud = true;
+        baudTime = micros();
       }
     }
-    if (Voltage > r_slope and CHECK_AMPLITUDE) { // Count cycle
-      countCycle++;
-      CHECK_BAUD = true;
-      CHECK_AMPLITUDE = false;
-    }
-    if (Voltage < r_slope and CHECK_BAUD) {
-      if (micros() - BAUD_BEGIN_TIME > 9900) {
-        //Serial.println("DATA : "+Frame::BINtoString(16, DATA));
+    //    if (Voltage > r_slope and CHECK_AMPLITUDE) { // Count cycle
+    //      countCycle++;
+    //      CHECK_BAUD = true;
+    //      CHECK_AMPLITUDE = false;
+    //    }
+  if(tmp>aUp and checkPeak==true ){
+    checkPeak = false;
+    count++;
+  }
+
+//    if (Voltage < r_slope and CHECK_BAUD) {
+//      if (micros() - BAUD_BEGIN_TIME > 9900) {
+//        //Serial.println("DATA : "+Frame::BINtoString(16, DATA));
+//        //Serial.println("nCyvle" + (String)countCycle);
+//        uint32_t twoBitData = (((countCycle - 5) / 3 ) & 3 ) << (BIT_CHECK * 2);
+//        //Serial.println("TWOBIT : "+(String)twoBitData);
+//        DATA |= twoBitData;
+//        BAUD_COUNT++;
+//        if (BAUD_COUNT == 8) {
+//          //Serial.println("DATA : " + (String)DATA);
+//
+//          Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, (uint16_t)DATA));
+//          Serial.println("-----------------------------------");
+//          Serial.flush();
+//          uint32_t outputData = DATA;
+//          DATA = 0;
+//          BAUD_COUNT = 0;
+//          BIT_CHECK = -1;
+//          countCycle = 0;
+//          CHECK_BAUD = false;
+//          return (uint16_t)outputData; /// return Frame data as INT
+//        }
+//        CHECK_BAUD = false;
+//        countCycle = 0;
+//      }
+//    }
+//    previousVoltage = Voltage;
+//  }
+ if (checkBaud == true and tmp<aDown) {
+      if (micros()-baudTime > timePerBaud) {
+        if(count>3){
+          //Serial.println("DATA : "+Frame::BINtoString(16, DATA));
         //Serial.println("nCyvle" + (String)countCycle);
-        uint32_t twoBitData = (((countCycle - 5) / 3 ) & 3 ) << (BIT_CHECK * 2);
+        uint32_t Bit = (tCyc(count)-16)/16;
         //Serial.println("TWOBIT : "+(String)twoBitData);
-        DATA |= twoBitData;
-        BAUD_COUNT++;
-        if (BAUD_COUNT == 8) {
+        data+= Bit << (bitCount * 2);
+        bitCount++;
+        if (bitCount == 8) {
           //Serial.println("DATA : " + (String)DATA);
 
-          Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, (uint16_t)DATA));
+          Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, (uint16_t)data));
           Serial.println("-----------------------------------");
           Serial.flush();
-          uint32_t outputData = DATA;
-          DATA = 0;
-          BAUD_COUNT = 0;
-          BIT_CHECK = -1;
-          countCycle = 0;
-          CHECK_BAUD = false;
+          uint32_t outputData = data;
+          data = 0;
+          bitCount = 0;
+          count = 0;
+          checkBaud = false;
           return (uint16_t)outputData; /// return Frame data as INT
         }
-        CHECK_BAUD = false;
-        countCycle = 0;
+        count = 0;
+        checkBaud = false;
+        }
+        count = 0;
+        checkBaud = false;
       }
     }
-    previousVoltage = Voltage;
+    if(micros()-baudTime>65000){
+     count = 0;
+     bitCount = 0;
+     data = 0;
+     baudTime = 0;
+     checkBaud = false;
+     checkPeak = false;
   }
+    prev = tmp;
+  }
+}
+int tCyc(int cyc){
+  if(cyc<24){
+    cyc = 16;
+  }else if(cyc<40){
+    cyc = 32;  
+  }
+  else if(cyc<56){
+    cyc = 48;
+  }else{
+    cyc = 64;
+  }
+  return cyc;
 }
 ////////////////////////////////////FSK////////////////////////////////
 String NAME[6] = {"START", "INITIAL", "WAIT_FOR_PIC", "SELECT", "WAIT_FOR_DATA", "RECEIVE_AND_DISPLAY"} ;

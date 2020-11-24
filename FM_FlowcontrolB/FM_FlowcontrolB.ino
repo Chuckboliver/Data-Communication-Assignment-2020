@@ -191,7 +191,7 @@ void loop() {
     String seq, ctrl;
     String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, ReceiveU), ctrl, seq);
     String Uctrl = seq + ctrl;
-    if (Uctrl.equals("010") and decodeddata.equals("00000000")) {
+    if (Uctrl.equals("010") and decodeddata.equals("00010000")) {
       Serial.println("UFrame Received : ");
       mode = 0;
       Serial.println("CHANGE MODE TO 0");
@@ -246,6 +246,7 @@ void loop() {
     if (Uctrl.equals("010")) {
       uint32_t data = Frame::byteString2Int(decodeddata);
       if (not decodeddata.equals("Error")) {
+        Serial.println(data);
         if (data == 16) {
           mode = 0;
           Serial.println("00");
