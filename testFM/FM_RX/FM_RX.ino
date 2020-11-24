@@ -19,27 +19,38 @@ uint32_t baudTime = 0;
 bool checkBaud = false;
 bool checkPeak = false;
 bool checkCyc = false;
-int baseA = 550;
-int aUp = baseA+140;
-int aDown = baseA-140;
-uint32_t timePerBaud = 38900;
+int baseA ;
+int aUp ;
+int aDown ;
+uint32_t timePerBaud = 39200;
 
 
 void setup() {
   sbi(ADCSRA,ADPS2) ; // this for increase analogRead Speed
   cbi(ADCSRA,ADPS1) ;
   cbi(ADCSRA,ADPS0) ;
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.flush();
   Wire.begin();
   radio.setFrequency(93.0);
+   baseA = analogRead(A3);
+   Serial.println(baseA);
+   for(int i=0;i<9;i++){
+    baseA+=analogRead(A3);
+   }
+   
+   baseA=baseA/10;
+   Serial.println(baseA);
+   aUp = baseA+120;
+   aDown = baseA-120;
 }
 void loop() {
-  int tmp = analogRead(A0);
+  int tmp = analogRead(A3);
   //Serial.println(tmp);
   if(tmp<aDown and checkPeak == false){
     checkPeak = true;
     if(checkBaud == false){
+      count = 0;
       checkBaud = true;
       baudTime = micros();
     }
@@ -51,21 +62,23 @@ void loop() {
   if(checkBaud == true and tmp<aDown){
     if(micros()-baudTime > timePerBaud){
       if(count>3){
-        //Serial.print(count);
+        Serial.print(count);
         uint16_t Bit = (tCyc(count)-16)/16;
         data+= Bit << (bitCount * 2);
         bitCount++;
         if (bitCount == 4){
-            Serial.print(char(data));
+            Serial.println(char(data));
             data = 0;
             bitCount = 0;
+            count = 0;
+            checkBaud = false;
           }
         count = 0;
         checkBaud = false;
       }
     }
   }
-  if(micros()-baudTime>65000){
+  if(micros()-baudTime>46000){
      count = 0;
      bitCount = 0;
      data = 0;
