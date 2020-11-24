@@ -93,7 +93,7 @@ void FM_TX(){
           cyc = 64;
           Delay = delay3;
         }
-        Serial.print(cyc);
+        //Serial.print(cyc);
         for (int sl=0;sl<cyc;sl++)
         {
           for (int s=0;s<4;s++) //4 sample/cycle
@@ -104,7 +104,7 @@ void FM_TX(){
         }
         inData[i]>>=2;
       }
-      Serial.println();
+      //Serial.println();
       //delay(100);
     }
    dac.setVoltage(0, false);
