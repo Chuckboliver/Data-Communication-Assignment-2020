@@ -199,7 +199,7 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
         checkBaud = false;
       }
     }
-    if(micros()-baudTime>65000){
+    if(micros()-baudTime>45000){
      count = 0;
      bitCount = 0;
      data = 0;
