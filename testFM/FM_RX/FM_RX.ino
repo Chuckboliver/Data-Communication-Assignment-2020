@@ -19,7 +19,7 @@ uint32_t baudTime = 0;
 bool checkBaud = false;
 bool checkPeak = false;
 bool checkCyc = false;
-int baseA = 550;
+int baseA = 800;
 int aUp = baseA+140;
 int aDown = baseA-140;
 uint32_t timePerBaud = 38900;
@@ -32,7 +32,7 @@ void setup() {
   Serial.begin(115200);
   Serial.flush();
   Wire.begin();
-  radio.setFrequency(93.0);
+  radio.setFrequency(103.0);
 }
 void loop() {
   int tmp = analogRead(A0);
