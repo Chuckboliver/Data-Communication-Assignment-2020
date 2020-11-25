@@ -31,7 +31,7 @@ bool checkCyc = false;
 int baseA ;
 int aUp ;
 int aDown ;
-uint32_t timePerBaud = 39200;
+uint32_t timePerBaud = 39000;
 
 /*S_DAC : Amplitude (12bit) of sine wave at 0,90,180,270*/
 const uint16_t S_DAC[4] = {2000,4000,2000,0};
@@ -147,7 +147,7 @@ void FM_RX(){
       }
     }
   }
-  if(micros()-baudTime>46000){
+  if(micros()-baudTime>56000){
      count = 0;
      bitCount = 0;
      data = 0;
