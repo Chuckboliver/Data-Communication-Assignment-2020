@@ -12,13 +12,13 @@ TEA5767Radio radio = TEA5767Radio();
 #include<Wire.h>
 #include <Adafruit_MCP4725.h>
 Adafruit_MCP4725 dac;
-const uint16_t S_DAC[4] = {1000, 2000, 1000, 0};
+const uint16_t S_DAC[4] = {2000, 4000, 2000, 0};
 const int delay0 = (1000000 / f0 - 1000000 / defaultFreq) / 4;
 const int delay1 = (1000000 / f1 - 1000000 / defaultFreq) / 4;
 const int delay2 = (1000000 / f2 - 1000000 / defaultFreq) / 4;
 const int delay3 = (1000000 / f3 - 1000000 / defaultFreq) / 4;
 const int setSample = 4;
-uint16_t delayFMConfig = 100;
+uint16_t delayFMConfig = 200;
 ////TX------VAR///////////
 ////RX------VAR///////////
 #ifndef cbi
@@ -47,7 +47,7 @@ bool checkCyc = false;
 int baseA ;
 int aUp ;
 int aDown ;
-uint32_t timePerBaud = 38900;
+uint32_t timePerBaud = 39000;
 ////RX------VAR///////////
 uint32_t byteString2Int(String arrays) {
   uint32_t num = 0;
@@ -66,7 +66,7 @@ void TX_Flow(String Frame) {
   //Choose cycle and delay then send
   uint32_t SEND_BIN_DATA = byteString2Int(Frame);
   //Serial.println("test " + (String)byteString2Int("1111111111111111"));
-  Serial.println("Frame : " + Frame);
+  Serial.println("SendFrame : " + Frame);
   Serial.println("-----------------------------------");
   for (int rounds = 15; rounds > 0; rounds -= 2)
   {
@@ -104,13 +104,13 @@ void TX_Flow(String Frame) {
     SEND_BIN_DATA >>= 2;
   }
   dac.setVoltage(0, false);
-  delay(delayFMConfig);
+  //delay(500);
 }
 
 uint16_t RX_Flow(String resendFrame, bool RESEND) {
   unsigned long currentTime = millis();
   while (bitCount < 8) {
-    if (not Timer(currentTime, 3000) and RESEND) { // Timer : if time out resend last frame.
+    if (not Timer(currentTime, 3456) and RESEND) { // Timer : if time out resend last frame.
       Serial.println("Time out!!!");
       Serial.print("Re");
       TX_Flow(resendFrame);
@@ -199,7 +199,7 @@ uint16_t RX_Flow(String resendFrame, bool RESEND) {
         checkBaud = false;
       }
     }
-    if(micros()-baudTime>45000){
+    if(micros()-baudTime>56000){
      count = 0;
      bitCount = 0;
      data = 0;
@@ -232,7 +232,7 @@ String UFrame;
 int framecounter = 0;
 long timer;
 void setup() {
-  dac.begin(0x62);
+  dac.begin(0x63);
   Serial.begin(9600);
   sbi(ADCSRA, ADPS2); // this for increase analogRead speed
   cbi(ADCSRA, ADPS1);
@@ -251,6 +251,7 @@ void setup() {
 }
 void SEND(int maxFrame, int nextMode) {
   String dataFrame = Frame::make_dataFrame(frame_arr[framecounter], myseq);
+  Serial.print("#" + (String)framecounter);
   TX_Flow(dataFrame);
   uint32_t ACK = RX_Flow(dataFrame, true);
   while (ACK == 0) {
@@ -259,10 +260,13 @@ void SEND(int maxFrame, int nextMode) {
   String seq, ctrl;
   String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, ACK), ctrl, seq);
 
-  if (ctrl.equals("01") and seq.equals((String)((myseq + 1) % 2))) {
+  if (ctrl.equals("01") and seq.equals((String)((myseq + 1) % 2)) and not decodeddata.equals("Error")) {
     Serial.println("Retrieve ACK " );
     myseq = (myseq + 1) % 2;
     framecounter++;
+  }
+  else{
+    Serial.println("DropFrame!!!");
   }
   if (framecounter == maxFrame) {
     mode = nextMode;
@@ -330,10 +334,12 @@ void loop() {
     while (ReceiveU == 0) {
       ReceiveU = RX_Flow("", false);
     }
+    
     String seq, ctrl;
     String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, ReceiveU), ctrl, seq);
     String Uctrl = seq + ctrl;
     if (Uctrl.equals("010")) {
+      Serial.println("UFrame Received : ");
       uint32_t data = Frame::byteString2Int(decodeddata);
       if (not decodeddata.equals("Error")) {
         Serial.println(data);
@@ -372,6 +378,8 @@ void loop() {
       }
     }
   }
+  
+  
   if (mode == 3) {
     /*
     for (int i = 0 ; i < 20 ; i++) {
@@ -380,15 +388,18 @@ void loop() {
     if(Serial.available()){
       String data = Serial.readStringUntil('\n');
       uint32_t tmp;
+      Serial.println("data : " + data);
       for(int quadrant = 0 ;quadrant < 4 ; quadrant++){
         
         for(int alpha = 0 ; alpha < 4 ; alpha++){
           if(data[5 * quadrant + alpha] == 49)tmp = 255;
           else if(data[5 * quadrant + alpha] == 48)tmp = 0;
+          else tmp = 32;
           frame_arr[framecounter++] = tmp;
         }
         if(data[5 * (quadrant+1) - 1 ] == 49)tmp = 255;
         else if(data[5 * (quadrant+1) - 1] == 48)tmp = 0;
+        else tmp = 32;
         frame_arr[framecounter++] = tmp;
       }
       mode = 4;
