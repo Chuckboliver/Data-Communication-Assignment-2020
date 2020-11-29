@@ -1,0 +1,4 @@
+opencv-python
+numpy==1.19.4
+Pillow
+pyserial
