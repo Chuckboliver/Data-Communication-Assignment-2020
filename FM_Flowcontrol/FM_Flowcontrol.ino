@@ -28,14 +28,7 @@ uint16_t delayFMConfig = 200;
 #define sbi(sfr, bit)(_SFR_BYTE(sfr)|=_BV(bit))
 #endif
 #define r_slope 200
-//int previousVoltage = 0;
-//int countCycle = 0;
-//uint16_t BAUD_COUNT = 0;
-//uint32_t DATA = 0;
-//uint16_t BIT_CHECK = -1;
-//bool CHECK_AMPLITUDE = false;
-//bool CHECK_BAUD = false;
-//uint32_t BAUD_BEGIN_TIME = 0;
+
 int prev = 0;
 int count = 0;
 uint16_t bitCount = 0;
@@ -53,7 +46,6 @@ uint32_t timeReset = 56000;
 uint32_t byteString2Int(String arrays) {
   uint32_t num = 0;
   for (size_t i = 0 ; i < arrays.length() ; ++i) {
-    //Serial.print((int)arrays[i]);
     num  = (num + (uint32_t)arrays[i] - 48) * 2;
   }
   return num / 2;
@@ -66,14 +58,11 @@ void TX_Flow(String Frame) {
   //Retrieve data input
   //Choose cycle and delay then send
   uint32_t SEND_BIN_DATA = byteString2Int(Frame);
-  //Serial.println("test " + (String)byteString2Int("1111111111111111"));
   Serial.println("Frame : " + Frame);
   Serial.println("-----------------------------------");
   for (int rounds = 15; rounds > 0; rounds -= 2)
   {
-    //Serial.println("Round : " + (String)rounds);
     uint32_t twoBitData = SEND_BIN_DATA & 3;
-    //Serial.println("TWOBITDATA : " + (String)twoBitData);
     uint32_t usedDelay, cyclePerBaud;
     if (twoBitData == 0)
     {
@@ -97,16 +86,13 @@ void TX_Flow(String Frame) {
     }
     for (size_t nCycle = 0 ; nCycle < cyclePerBaud ; ++nCycle) {
       for (size_t nSample = 0 ; nSample < setSample ; ++nSample) {
-        //Serial.println(S_DAC[nSample]);
         dac.setVoltage(S_DAC[nSample], false);
         delayMicroseconds(usedDelay);
       }
     }
     SEND_BIN_DATA >>= 2;
   }
-  //delay(delayFMConfig);
   dac.setVoltage(0, false);
-
 }
 
 uint16_t RX_Flow(String resendFrame, bool RESEND) {
@@ -203,10 +189,10 @@ void setup() {
   for (int i = 0; i < 9; i++) {
     baseA += analogRead(A3);
   }
-  baseA = baseA / 10;
-  //Serial.print(baseA);
-  aUp = baseA + 120;
-  aDown = baseA - 120;
+  baseA = baseA / 10; //เก็บค่า AnalogRead ก่อนมีข้อมูลส่งว่าเริ่มต้นเป็นเท่าไหร่
+  aUp = baseA + 120; //เอาไว้เช็คว่าถ้าเกินค่านี้ แสดงว่าเป็นขาขึ้น     
+  aDown = baseA - 120; //เอาไว้เช็คว่าถ้าต่ำกว่าค่านี้ แสดงว่าเป็นขาลง
+                       //ที่แบ่งเป็นช่วงเพราะอาจมีนอยส์เข้ามา
 }
 void display3() {
   Serial.print("DATA : [LEFT]  [CENTER] [RIGHT]\n       ");
@@ -219,11 +205,10 @@ void display3() {
 void display20() {
   for (framecounter = 0; framecounter < 20; framecounter++) {
     if ((framecounter + 1) % 5 != 0) {
-      Serial.println("Frame " + String(framecounter + 1) + "(x,y) : " + (String)byteString2Int(frame_arr[framecounter]));
+      Serial.println("Frame " + String(framecounter + 1) + " : " + (String)byteString2Int(frame_arr[framecounter]));
     } else {
       Serial.println("Frame " + String(framecounter + 1) + "->" + "Mean " + String((framecounter + 1) / 5) + " : " + (String)byteString2Int(frame_arr[framecounter]));
     }
-    //delay(500);
   }
   framecounter = 0 ;
 }
@@ -265,7 +250,6 @@ void loop() {
       while (Serial.available()) {
         uint8_t temp = Serial.read();
       }
-      //myseq=0;
       mode = 0;
       Serial.println("MODE : " + NAME[mode + 1]);
       Serial.flush();
@@ -286,7 +270,6 @@ void loop() {
     String ctrl, seq;
     String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
     if (not decodedFrame.equals("Error")) {
-      //myseq=0;
       mode = 1;
       Serial.println("MODE : " + NAME[mode + 1]);
     }
@@ -332,7 +315,6 @@ void loop() {
     }
   }
   if (mode == 3) { //send specific scan command
-    //String UFrame = Frame::make_UFrame(angle);
     String UFrame = Frame::make_UFrame(Frame::byteString2Int(PicBinary[angle - 1]));
     Serial.println("-----------------------------------");
     TX_Flow(UFrame);
@@ -349,11 +331,10 @@ void loop() {
     }
   }
   if (mode == 4) {
-    RECEIVE(20, 2);
-    //Display data
+    RECEIVE(21, 2);
     if (mode == 2) {
       Serial.println("MODE : " + NAME[mode + 1]);
-      if (Frame::byteString2Int(frame_arr[0]) != 32) {
+      if (Frame::byteString2Int(frame_arr[20]) != 0) {
         display20();
       }
       else {
