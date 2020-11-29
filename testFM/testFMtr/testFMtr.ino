@@ -48,7 +48,7 @@ void setup() {
   Serial.begin(9600);
   Serial.flush();
   Wire.begin();
-  radio.setFrequency(102.2);
+  radio.setFrequency(105.2);
    baseA = analogRead(A3);
    Serial.println(baseA);
    for(int i=0;i<9;i++){
@@ -62,13 +62,16 @@ void setup() {
 
 
 void loop() {
-  FM_TX();
+  if (Serial.available() > 0){
+    FM_TX();
+  }
+  
   FM_RX();
 
 }
 
 void FM_TX(){
-  if (Serial.available() > 0){
+  
     String inp = Serial.readString();
     int count = 0;
     for(int i = 0; i<inp.length()-1;i++){
@@ -109,7 +112,7 @@ void FM_TX(){
     }
    dac.setVoltage(0, false);
    
-  }
+  
 
 }
 

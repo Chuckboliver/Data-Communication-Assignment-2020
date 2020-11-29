@@ -28,14 +28,7 @@ uint16_t delayFMConfig = 200;
 #define sbi(sfr, bit)(_SFR_BYTE(sfr)|=_BV(bit))
 #endif
 #define r_slope 200
-//int previousVoltage = 0;
-//int countCycle = 0;
-//uint16_t BAUD_COUNT = 0;
-//uint32_t DATA = 0;
-//uint16_t BIT_CHECK = -1;
-//bool CHECK_AMPLITUDE = false;
-//bool CHECK_BAUD = false;
-//uint32_t BAUD_BEGIN_TIME = 0;
+
 int prev = 0;
 int count = 0;
 uint16_t bitCount = 0;
@@ -48,11 +41,11 @@ int baseA;
 int aUp;
 int aDown;
 uint32_t timePerBaud = 39000;
+uint32_t timeReset = 56000;
 ////RX------VAR///////////
 uint32_t byteString2Int(String arrays) {
   uint32_t num = 0;
   for (size_t i = 0 ; i < arrays.length() ; ++i) {
-    //Serial.print((int)arrays[i]);
     num  = (num + (uint32_t)arrays[i] - 48) * 2;
   }
   return num / 2;
@@ -65,14 +58,11 @@ void TX_Flow(String Frame) {
   //Retrieve data input
   //Choose cycle and delay then send
   uint32_t SEND_BIN_DATA = byteString2Int(Frame);
-  //Serial.println("test " + (String)byteString2Int("1111111111111111"));
   Serial.println("Frame : " + Frame);
   Serial.println("-----------------------------------");
   for (int rounds = 15; rounds > 0; rounds -= 2)
   {
-    //Serial.println("Round : " + (String)rounds);
     uint32_t twoBitData = SEND_BIN_DATA & 3;
-    //Serial.println("TWOBITDATA : " + (String)twoBitData);
     uint32_t usedDelay, cyclePerBaud;
     if (twoBitData == 0)
     {
@@ -96,131 +86,81 @@ void TX_Flow(String Frame) {
     }
     for (size_t nCycle = 0 ; nCycle < cyclePerBaud ; ++nCycle) {
       for (size_t nSample = 0 ; nSample < setSample ; ++nSample) {
-        //Serial.println(S_DAC[nSample]);
         dac.setVoltage(S_DAC[nSample], false);
         delayMicroseconds(usedDelay);
       }
     }
     SEND_BIN_DATA >>= 2;
   }
-  //delay(delayFMConfig);
   dac.setVoltage(0, false);
-  
 }
 
 uint16_t RX_Flow(String resendFrame, bool RESEND) {
   unsigned long currentTime = millis();
   while (bitCount < 8) {
-    if (not Timer(currentTime, 2000) and RESEND) { // Timer : if time out resend last frame.
+    if (not Timer(currentTime, 5000) and RESEND) { // Timer : if time out resend last frame.
       Serial.println("Time out!!!");
       Serial.print("Re");
       TX_Flow(resendFrame);
       return 0;
     }
-
     uint32_t tmp = analogRead(A3);//Read analog from analog pin
-    //    if (Voltage > r_slope and previousVoltage < r_slope and not CHECK_AMPLITUDE) { //Found amplitude -> Found Baud
-    //      CHECK_AMPLITUDE = true;
-    //      if (not CHECK_BAUD) {
-    //        BAUD_BEGIN_TIME = micros();
-    //        BIT_CHECK++;
-    //      }
-    //    }
-  if(tmp<aDown and checkPeak == false){
+    if (tmp < aDown and checkPeak == false) {
       checkPeak = true;
-      if(checkBaud == false){
+      if (checkBaud == false) {
         checkBaud = true;
         baudTime = micros();
       }
     }
-    //    if (Voltage > r_slope and CHECK_AMPLITUDE) { // Count cycle
-    //      countCycle++;
-    //      CHECK_BAUD = true;
-    //      CHECK_AMPLITUDE = false;
-    //    }
-  if(tmp>aUp and checkPeak==true ){
-    checkPeak = false;
-    count++;
-  }
-
-//    if (Voltage < r_slope and CHECK_BAUD) {
-//      if (micros() - BAUD_BEGIN_TIME > 9900) {
-//        //Serial.println("DATA : "+Frame::BINtoString(16, DATA));
-//        //Serial.println("nCyvle" + (String)countCycle);
-//        uint32_t twoBitData = (((countCycle - 5) / 3 ) & 3 ) << (BIT_CHECK * 2);
-//        //Serial.println("TWOBIT : "+(String)twoBitData);
-//        DATA |= twoBitData;
-//        BAUD_COUNT++;
-//        if (BAUD_COUNT == 8) {
-//          //Serial.println("DATA : " + (String)DATA);
-//
-//          Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, (uint16_t)DATA));
-//          Serial.println("-----------------------------------");
-//          Serial.flush();
-//          uint32_t outputData = DATA;
-//          DATA = 0;
-//          BAUD_COUNT = 0;
-//          BIT_CHECK = -1;
-//          countCycle = 0;
-//          CHECK_BAUD = false;
-//          return (uint16_t)outputData; /// return Frame data as INT
-//        }
-//        CHECK_BAUD = false;
-//        countCycle = 0;
-//      }
-//    }
-//    previousVoltage = Voltage;
-//  }
- if (checkBaud == true and tmp<aDown) {
-      if (micros()-baudTime > timePerBaud) {
-        if(count>3){
-          //Serial.println("DATA : "+Frame::BINtoString(16, DATA));
-        //Serial.println("nCyvle" + (String)countCycle);
-        uint32_t Bit = (tCyc(count)-16)/16;
-        //Serial.println("TWOBIT : "+(String)twoBitData);
-        data+= Bit << (bitCount * 2);
-        bitCount++;
-        if (bitCount == 8) {
-          //Serial.println("DATA : " + (String)DATA);
-
-          Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, (uint16_t)data));
-          Serial.println("-----------------------------------");
-          Serial.flush();
-          uint32_t outputData = data;
-          data = 0;
-          bitCount = 0;
+    if (tmp > aUp and checkPeak == true ) {
+      checkPeak = false;
+      count++;
+    }
+    if (checkBaud == true and tmp < aDown) {
+      if (micros() - baudTime > timePerBaud) {
+        if (count > 3) {
+          uint32_t Bit = (tCyc(count) - 16) / 16;
+          data += Bit << (bitCount * 2);
+          bitCount++;
+          if (bitCount == 8) {
+            Serial.println("RECIEVE FRAME : " + Frame::BINtoString(16, (uint16_t)data));
+            Serial.println("-----------------------------------");
+            Serial.flush();
+            uint32_t outputData = data;
+            data = 0;
+            bitCount = 0;
+            count = 0;
+            checkBaud = false;
+            return (uint16_t)outputData; /// return Frame data as INT
+          }
           count = 0;
           checkBaud = false;
-          return (uint16_t)outputData; /// return Frame data as INT
-        }
-        count = 0;
-        checkBaud = false;
         }
         count = 0;
         checkBaud = false;
       }
     }
-    if(micros()-baudTime>60000){
-     count = 0;
-     bitCount = 0;
-     data = 0;
-     baudTime = 0;
-     checkBaud = false;
-     checkPeak = false;
-  }
+    if (micros() - baudTime > timeReset) {
+      count = 0;
+      bitCount = 0;
+      data = 0;
+      baudTime = 0;
+      checkBaud = false;
+      checkPeak = false;
+    }
     prev = tmp;
   }
 }
-int tCyc(int cyc){
-  if(cyc<24){
-    cyc = 16;
-  }else if(cyc<40){
-    cyc = 32;  
+int tCyc(int cyc) {
+  if (cyc < 24) {
+    cyc = 16; //00
+  } else if (cyc < 40) {
+    cyc = 32;//01
   }
-  else if(cyc<56){
-    cyc = 48;
-  }else{
-    cyc = 64;
+  else if (cyc < 56) {
+    cyc = 48;  //10
+  } else {
+    cyc = 64;  //11
   }
   return cyc;
 }
@@ -244,32 +184,31 @@ void setup() {
   Serial.println("MODE : " + NAME[mode + 1] + " Press Enter :");
   Serial.flush();
   Wire.begin();
-  radio.setFrequency(87.5);
+  radio.setFrequency(93.0);
   baseA = analogRead(A3);
-   for(int i=0;i<9;i++){
-    baseA+=analogRead(A3);
-   }
-   baseA=baseA/10;
-   //Serial.print(baseA);
-   aUp = baseA+120;
-   aDown = baseA-120;
+  for (int i = 0; i < 9; i++) {
+    baseA += analogRead(A3);
+  }
+  baseA = baseA / 10; //เก็บค่า AnalogRead ก่อนมีข้อมูลส่งว่าเริ่มต้นเป็นเท่าไหร่
+  aUp = baseA + 120; //เอาไว้เช็คว่าถ้าเกินค่านี้ แสดงว่าเป็นขาขึ้น     
+  aDown = baseA - 120; //เอาไว้เช็คว่าถ้าต่ำกว่าค่านี้ แสดงว่าเป็นขาลง
+                       //ที่แบ่งเป็นช่วงเพราะอาจมีนอยส์เข้ามา
 }
-void display3(){
+void display3() {
   Serial.print("DATA : [LEFT]  [CENTER] [RIGHT]\n       ");
-    for(framecounter = 0;framecounter<3;framecounter++){
-    Serial.print("["+Frame::BINtoString(4,(int)byteString2Int(PicBinary[framecounter]))+"]   ");
+  for (framecounter = 0; framecounter < 3; framecounter++) {
+    Serial.print("[" + Frame::BINtoString(4, (int)byteString2Int(PicBinary[framecounter])) + "]   ");
   }
   Serial.println();
   framecounter = 0;
 }
-void display20(){
-  for (framecounter = 0;framecounter<20;framecounter++){
-    if((framecounter+1)%5!=0){
-      Serial.println("Frame "+String(framecounter+1)+"(x,y) : "+(String)byteString2Int(frame_arr[framecounter]));
-    }else{
-      Serial.println("Frame "+String(framecounter+1)+"->"+"Mean "+String((framecounter+1)/5)+" : "+(String)byteString2Int(frame_arr[framecounter]));
+void display20() {
+  for (framecounter = 0; framecounter < 20; framecounter++) {
+    if ((framecounter + 1) % 5 != 0) {
+      Serial.println("Frame " + String(framecounter + 1) + " : " + (String)byteString2Int(frame_arr[framecounter]));
+    } else {
+      Serial.println("Frame " + String(framecounter + 1) + "->" + "Mean " + String((framecounter + 1) / 5) + " : " + (String)byteString2Int(frame_arr[framecounter]));
     }
-    delay(500);
   }
   framecounter = 0 ;
 }
@@ -283,17 +222,19 @@ void RECEIVE(int maxFrame, int nextMode) {
   String ctrl, seq;
   String decodeddata = Frame::decodeFrame(Frame::BINtoString(16, dataFrame), ctrl, seq);
   if (ctrl.equals("00") and seq.equals((String)myseq) and not decodeddata.equals("Error")) {
-
+    Serial.println("#" + (String)framecounter);
     Serial.println("Decoded data : " + decodeddata);
-    if( maxFrame != 3){
+    if ( maxFrame != 3) {
       frame_arr[framecounter] = decodeddata;
     }
-    else{
+    else {
       PicBinary[framecounter] = decodeddata;
     }
     myseq = (myseq + 1) % 2;
     framecounter++;
+
   }
+  
   String ACK = Frame::make_ackFrame(myseq);
   TX_Flow(ACK);
   if (framecounter == maxFrame) {
@@ -315,24 +256,27 @@ void loop() {
     }
   }
   if (mode == 0) { //sendUframe to scan/rescan
+
     String UFrame = Frame::make_UFrame(16);
     Serial.println("-----------------------------------");
     TX_Flow(UFrame);
     Serial.println("-----------------------------------");
+
     int receiveData = RX_Flow(UFrame, true);
     while (receiveData == 0) {
       receiveData = RX_Flow(UFrame, true);
     }
-    String ctrl,seq;
+
+    String ctrl, seq;
     String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
-    if(not decodedFrame.equals("Error")){
+    if (not decodedFrame.equals("Error")) {
       mode = 1;
       Serial.println("MODE : " + NAME[mode + 1]);
     }
   }
   if (mode == 1) { //receiving data from sender
     RECEIVE(3, 2);
-    if(mode == 2){
+    if (mode == 2) {
       Serial.println("MODE : " + NAME[mode + 1]);
       display3();
       Serial.println("Pls enter something. :\n1).Scan -45\n2).Scan 0\n3).Scan 45\n0).ReScan");
@@ -371,7 +315,6 @@ void loop() {
     }
   }
   if (mode == 3) { //send specific scan command
-    //String UFrame = Frame::make_UFrame(angle);
     String UFrame = Frame::make_UFrame(Frame::byteString2Int(PicBinary[angle - 1]));
     Serial.println("-----------------------------------");
     TX_Flow(UFrame);
@@ -380,21 +323,28 @@ void loop() {
     while (receiveData == 0) {
       receiveData = RX_Flow(UFrame, true);
     }
-    String ctrl,seq;
+    String ctrl, seq;
     String decodedFrame = Frame::decodeFrame(Frame::BINtoString(16, receiveData), ctrl, seq);
-    if(not decodedFrame.equals("Error")){
+    if (not decodedFrame.equals("Error")) {
       mode = 4;
       Serial.println("MODE : " + NAME[mode + 1]);
     }
   }
   if (mode == 4) {
-   RECEIVE(20, 2);
-   //Display data
-   if(mode == 2){
-    Serial.println("MODE : " + NAME[mode + 1]);
-    display20();
-    Serial.println("Pls enter something. :\n1).Scan -45\n2).Scan 0\n3).Scan 45\n0).ReScan");
-   }
-   
+    RECEIVE(21, 2);
+    if (mode == 2) {
+      Serial.println("MODE : " + NAME[mode + 1]);
+      if (Frame::byteString2Int(frame_arr[20]) != 0) {
+        display20();
+      }
+      else {
+        Serial.println("**********************");
+        Serial.println("NOT FOUND!!!");
+        Serial.println("**********************");
+      }
+      display3();
+      Serial.println("Pls enter something. :\n1).Scan -45\n2).Scan 0\n3).Scan 45\n0).ReScan");
+    }
+
   }
 }
