@@ -26,5 +26,3 @@
 - 01 -> 5 cycles/baud
 - 10 -> 8 cycles/baud
 - 11 -> 11 cycles/baud
-
-
