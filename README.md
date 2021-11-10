@@ -1,4 +1,4 @@
-# Data Communication Assignment 2563
+# Data Communication Assignment 2020
 ## Frame :
 ### Fixed Size/ Stop and Wait ARQ/ Bit-Oriented<br />
 1. **dataframe(16 bit):**<br />
